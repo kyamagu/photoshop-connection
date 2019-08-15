@@ -22,7 +22,9 @@ Photoshop must be launched and running for `PhotoshopConnection` to work.
 Usage
 -----
 
-Example::
+Example:
+
+.. code-block:: python
 
     from photoshop import PhotoshopConnection
 
@@ -31,7 +33,9 @@ Example::
     print(conn.execute('app'))
     del conn
 
-It is also possible to use `with` statement::
+It is also possible to use `with` statement:
+
+.. code-block:: python
 
     with PhotoshopConnection(password='secret') as conn:
         print(conn.execute('app'))
