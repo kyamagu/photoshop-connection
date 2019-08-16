@@ -3,7 +3,6 @@ from setuptools import setup, find_packages
 version = '0.0.1'
 
 setup(
-    # Basic info
     name='photoshop-connection',
     version=version,
     author='Kota Yamaguchi',
@@ -22,9 +21,9 @@ setup(
     packages=find_packages('src'),
     install_requires=[
         'cryptography',
+        'jinja2',
     ],
     entry_points={
-        'console_scripts': [
-            'photoshop-connection = photoshop.__main__:main'],
+        'console_scripts': ['photoshop-connection = photoshop.__main__:main'],
     },
 )

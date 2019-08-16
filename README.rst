@@ -28,15 +28,6 @@ Example:
 
     from photoshop import PhotoshopConnection
 
-    conn = PhotoshopConnection(password='secret', host='127.0.0.1')
-    print(conn.execute('11 + 2'))
-    print(conn.execute('app'))
-    del conn
-
-It is also possible to use `with` statement:
-
-.. code-block:: python
-
     with PhotoshopConnection(password='secret') as conn:
-        print(conn.execute('app'))
-        print(conn.execute('11 + 2'))
+        conn.execute('alert("hello")')
+        jpeg_binary = conn.get_document_thumbnail()

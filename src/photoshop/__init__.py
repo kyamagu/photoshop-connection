@@ -3,11 +3,12 @@ import socket
 import logging
 
 from photoshop.protocol import Protocol, ContentType
+from photoshop.api import Kevlar
 
 logger = logging.getLogger(__name__)
 
 
-class PhotoshopConnection(object):
+class PhotoshopConnection(Kevlar):
     def __init__(self, password, host='localhost', port=49494):
         """
         Execute the given ExtendScript in Photoshop.
