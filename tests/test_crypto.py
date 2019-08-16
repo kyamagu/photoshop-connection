@@ -1,6 +1,4 @@
-import logging
 from photoshop.crypto import EncryptDecrypt
-
 
 PASSWORD = b'lei6ooH6ieyeenga'
 
@@ -26,7 +24,6 @@ ENCRYPTED = (
 
 
 def test_encrypt_decrypt():
-    logging.basicConfig(level=logging.INFO)
     f = EncryptDecrypt(PASSWORD)
     assert f.encrypt(DECRYPTED) == ENCRYPTED
     assert f.decrypt(ENCRYPTED) == DECRYPTED
