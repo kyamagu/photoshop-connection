@@ -2,14 +2,14 @@ import contextlib
 import pytest
 import threading
 from socketserver import BaseRequestHandler, ThreadingTCPServer
-from photoshop import PhotoshopProtocol, ContentType, Pixmap
+from photoshop.protocol import Protocol, ContentType, Pixmap
 
 PASSWORD = 'secret'
 
 
 class PhotoshopHandler(BaseRequestHandler):
     def setup(self):
-        self.protocol = PhotoshopProtocol(PASSWORD)
+        self.protocol = Protocol(PASSWORD)
 
     def handle(self):
         raise NotImplementedError
