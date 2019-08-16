@@ -116,7 +116,7 @@ class Protocol(object):
             logger.error(
                 'status = %d: likely incorrect password: %r' % (
                     status, body[:min(12, len(body))] +
-                    ('' if len(body) <= 12 else '...')
+                    (b'' if len(body) <= 12 else b'...')
                 )
             )
             return dict(

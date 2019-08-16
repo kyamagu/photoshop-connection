@@ -70,7 +70,8 @@ class PhotoshopConnection(object):
                 self.socket, ContentType.SCRIPT, script.encode('utf-8'), txn
             )
             response = self.protocol.receive(self.socket)
-            assert response['transaction'] == txn
+            if response.get('transaction') is not None:
+                assert response['transaction'] == txn
 
         if response['status'] or (
             response['content_type'] == ContentType.ILLEGAL

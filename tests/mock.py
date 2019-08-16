@@ -34,6 +34,24 @@ class PixmapHandler(PhotoshopHandler):
         self.protocol.send(self.request, ContentType.IMAGE, data)
 
 
+class ErrorImageHandler(PhotoshopHandler):
+    def handle(self):
+        request = self.protocol.receive(self.request)
+        self.protocol.send(self.request, ContentType.IMAGE, b'\x03\x00')
+
+
+class IllegalHandler(PhotoshopHandler):
+    def handle(self):
+        request = self.protocol.receive(self.request)
+        self.protocol.send(self.request, ContentType.ILLEGAL, b'')
+
+
+class ErrorHandler(BaseRequestHandler):
+    def handle(self):
+        self.request.recv(1024)
+        self.request.sendall(b'\x00\x00\x00\x04\x00\x00\x00\x01')
+
+
 @contextlib.contextmanager
 def serve(handler):
     server = ThreadingTCPServer(('localhost', 0), handler)
@@ -59,4 +77,22 @@ def jpeg_server():
 @pytest.yield_fixture
 def pixmap_server():
     with serve(PixmapHandler) as server:
+        yield server
+
+
+@pytest.yield_fixture
+def illegal_server():
+    with serve(IllegalHandler) as server:
+        yield server
+
+
+@pytest.yield_fixture
+def error_server():
+    with serve(ErrorHandler) as server:
+        yield server
+
+
+@pytest.yield_fixture
+def error_image_server():
+    with serve(ErrorImageHandler) as server:
         yield server
