@@ -1,10 +1,17 @@
+import os
 from setuptools import setup, find_packages
 
-version = '0.0.1'
+
+def get_version():
+    root = os.path.dirname(__file__)
+    filename = os.path.join(root, 'src', 'photoshop', 'version.py')
+    with open(filename, 'r') as f:
+        return f.read().split('=')[1].strip(" \n'")
+
 
 setup(
     name='photoshop-connection',
-    version=version,
+    version=get_version(),
     author='Kota Yamaguchi',
     author_email='KotaYamaguchi1984@gmail.com',
     url='https://github.com/kyamagu/photoshop-connection',
