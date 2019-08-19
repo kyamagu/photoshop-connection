@@ -64,7 +64,7 @@ class PhotoshopConnection(Kevlar):
         Execute the given ExtendScript in Photoshop.
 
         :param script: ExtendScript to execute in Photoshop.
-        :return: `dict`. See :py:method:`~photoshop.protocol.Protocol.receive`
+        :return: `dict`. See :py:meth:`~photoshop.protocol.Protocol.receive`
         """
         with self._transaction() as txn:
             self.protocol.send(

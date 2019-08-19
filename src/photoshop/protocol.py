@@ -77,7 +77,7 @@ class Protocol(object):
         """
         Sends data to Photoshop.
 
-        :param content_type: See :py:class:`ContentType`.
+        :param content_type: See :py:class:`.ContentType`.
         :param data: `bytes` to send.
         :param transaction: transaction id.
         """
@@ -93,12 +93,13 @@ class Protocol(object):
 
         :param socket: socket to receive data.
         :return: `dict` of the following fields:
-            - `status`: execution status, 0 when success, otherwise error.
-            - `protocol`: protocol version, equal to 1.
-            - `transaction`: transaction id.
-            - `content_type`: data type. See :py:class:`photoshop.ContentType`.
-            - `body`: body of the response data, `dict` for IMAGE type,
-                otherwise bytes.
+
+         - `status`: execution status, 0 when success, otherwise error.
+         - `protocol`: protocol version, equal to 1.
+         - `transaction`: transaction id.
+         - `content_type`: data type. See :py:class:`ContentType`.
+         - `body`: body of the response data, `dict` for IMAGE type, otherwise
+           bytes.
         """
         header = socket.recv(8)
         assert len(header) == 8, (
