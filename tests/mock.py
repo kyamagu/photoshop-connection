@@ -55,11 +55,11 @@ class ErrorHandler(BaseRequestHandler):
 @contextlib.contextmanager
 def serve(handler):
     server = ThreadingTCPServer(('localhost', 0), handler)
-    with server:
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
-        yield server.server_address
-        server.shutdown()
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield server.server_address
+    server.shutdown()
+    server.server_close()
 
 
 @pytest.yield_fixture
