@@ -22,3 +22,11 @@ def test_get_layer_thumbnail(pixmap_server):
     ) as conn:
         pixmap = conn.get_layer_thumbnail()
         assert isinstance(pixmap, Pixmap)
+
+
+def test_get_layer_shape(script_server):
+    with PhotoshopConnection(
+        PASSWORD, port=script_server[1], validator=parseScript
+    ) as conn:
+        shape_info = conn.get_layer_shape()
+        assert shape_info is None

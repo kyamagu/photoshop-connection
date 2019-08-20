@@ -3,6 +3,7 @@ Kevlar API wrappers.
 
 https://github.com/adobe-photoshop/generator-core/wiki/Photoshop-Kevlar-API-Additions-for-Generator
 """
+import json
 from jinja2 import Environment, PackageLoader
 import logging
 
@@ -26,7 +27,7 @@ class Kevlar(object):
         max_width=2048,
         max_height=2048,
         format=1,
-        placed_ids=[]
+        placed_ids=None
     ):
         """
         :param document: optional document id, uses active doc if not specified.
@@ -64,7 +65,7 @@ class Kevlar(object):
         layer_comp_id=None,
         layer_comp_index=None,
         dither=True,
-        color_dither=True,
+        color_dither=True
     ):
         """
         :param document: optional document id, uses active doc if not specified.
@@ -233,3 +234,77 @@ class Kevlar(object):
             'sendLayerThumbnailToNetworkClient.js.j2', locals()
         )
         return response.get('body', {}).get('data')
+
+    def get_layer_shape(
+        self, document=None, layer=None, version='1.0.0', placed_ids=None
+    ):
+        """
+        Return path/fill/strokeStyle for a shape layer(s).
+
+        :param document: optional document id, uses active doc if not specified.
+        :param placed_ids: Photoshop 16.1 and later, optional. reference smart
+            object(s) within the document series of "ID" from
+            layer:smartObject:{} or "placedID" from "image:placed:[{}]".
+        :param layer: `None` for currently selected layers in photoshop, or
+            specify one of the following:
+            - integer ID of a single layer, e.g. `0`.
+            - (`first`, `last`) tuple of layer IDs, e.g., (1, 6).
+        :param version: format version. Valid versions are 1.0.0 in 14.1, and
+            1.0, 1.0.0, 1.1, or 1.1.0 in Photoshop 14.2
+        :return: `dict` of the following schema, or `None` if no valid layer is
+            specified.
+
+
+        Schema:
+
+        .. code-block:: none
+
+            {"path":
+                {"pathComponents": // arrays of paths to be filled and boolean operators
+                    [{"shapeOperation": ("intersect"/"add"/"subtract"/"xor")
+                    "subpathListKey":[  //list of subpath objects that make up the component
+                        {"closedSubpath":true, // (if subpath is closed)
+                         "points": [{" // array of knot objects (anchor and control points)
+                            anchor:[x,y]        //point on path
+                            forward:[x1,y1]     //forward bezier control
+                            backward:[x2,y2]    //backward bezier control
+                            },  //next knot...
+                            ...]
+                    "origin":{"origin": ("ellipse"/"rect"/"roundedrect"/"line"/"unknown")
+                    "radii":  [r1,r2,r3,r4], //radii for rounded rect if any
+                "bounds":["top":top,"left":left,"right":right,"bottom":bottom], //bounds of entire path
+                "defaultFill":true/false}, //whether path starts out filled or not
+            "fill":
+                {"color":{"red":red,"green":green,"blue":blue},"class":"solidColorLayer"}
+                //or
+                {"gradient":{(gradient object)},"class":"gradientLayer"}
+                //or
+                {"pattern":{(pattern object)},"class":"patternLayer"}
+            "strokeStyle":
+                {(strokeStyle object)}
+            }
+
+        Example::
+
+            {"path":{"pathComponents":
+                    [{"shapeOperation":"add",
+                      "subpathListKey":[
+                        {"closedSubpath":true,
+                         "points": [{"anchor":[234.5,36],"forward":[307.125,36],"backward":[161.875,36]},
+                            {"anchor":[366,167],"forward":[366,239.349],"backward":[366,94.651]},
+                            {"anchor":[234.5,298],"forward":[161.875,298],"backward":[307.125,298]},
+                            {"anchor":[103,167],"forward":[103,94.651],"backward":[103,239.349]}]
+                        }],
+                       "origin":{"origin":"ellipse","bounds":[35,102,299,367]}
+                    }],
+                "bounds":[35,102,299,367],
+                "defaultFill":false},
+            "fill":{"color":{"red":0,"green":0,"blue":0},"class":"solidColorLayer"}
+            }
+        """
+        response = self._execute(
+            'sendLayerShapeToNetworkClient.js.j2', locals()
+        )
+        if response.get('body'):
+            return json.loads(response.get('body'))
+        return None

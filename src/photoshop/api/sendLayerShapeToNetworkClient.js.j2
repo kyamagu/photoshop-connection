@@ -1,0 +1,22 @@
+var idNS = stringIDToTypeID("sendLayerShapeToNetworkClient");
+var desc1 = new ActionDescriptor();
+{% if document %}
+desc1.putInteger(stringIDToTypeID("documentID"), {{document}});
+{% endif %}
+{% if placed_ids %}
+var placedList = new ActionList();
+    {% for placed_id in placed_ids %}
+placedList.putString("{{placed_id}}");
+    {% endfor %}
+desc1.putList(stringIDToTypeID("placedID"), placedList);
+{% endif %}
+{% if layer is iterable %}
+desc1.putInteger(stringIDToTypeID("firstLayer"), {{layer[0]}});
+desc1.putInteger(stringIDToTypeID("lastLayer"), {{layer[1]}});
+{% elif layer is number %}
+desc1.putInteger(stringIDToTypeID("layerID"), {{layer}});
+{% else %}
+desc1.putBoolean(stringIDToTypeID("selectedLayers"), true);
+{% endif %}
+desc1.putString(stringIDToTypeID("version"), "{{version}}");
+executeAction(idNS, desc1, DialogModes.NO);
