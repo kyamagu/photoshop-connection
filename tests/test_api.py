@@ -2,10 +2,7 @@ import pytest
 from esprima import parseScript
 from photoshop import PhotoshopConnection
 from photoshop.protocol import Pixmap
-from .mock import (
-    script_server, jpeg_server, pixmap_server, error_server,
-    error_image_server, PASSWORD
-)
+from .mock import (script_output_server, jpeg_server, pixmap_server, PASSWORD)
 
 
 def test_get_document_thumbnail(jpeg_server):
@@ -24,9 +21,17 @@ def test_get_layer_thumbnail(pixmap_server):
         assert isinstance(pixmap, Pixmap)
 
 
-def test_get_layer_shape(script_server):
+def test_get_layer_shape(script_output_server):
     with PhotoshopConnection(
-        PASSWORD, port=script_server[1], validator=parseScript
+        PASSWORD, port=script_output_server[1], validator=parseScript
+    ) as conn:
+        shape_info = conn.get_layer_shape()
+        assert shape_info is None
+
+
+def test_get_document_info(script_output_server):
+    with PhotoshopConnection(
+        PASSWORD, port=script_output_server[1], validator=parseScript
     ) as conn:
         shape_info = conn.get_layer_shape()
         assert shape_info is None

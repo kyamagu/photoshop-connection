@@ -12,11 +12,15 @@ class ContentType(enum.IntEnum):
     Message content type.
     """
     ILLEGAL = 0
-    ERRORSTRING = 1
+    ERROR_STRING = 1
     SCRIPT = 2
     IMAGE = 3
     PROFILE = 4
     DATA = 5
+    KEEP_ALIVE = 6
+    FILE_STREAM = 7
+    CANCEL_COMMAND = 8
+    EVENT_STATUS = 9
 
 
 class Pixmap(object):

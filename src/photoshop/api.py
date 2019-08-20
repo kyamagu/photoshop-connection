@@ -19,7 +19,7 @@ class Kevlar(object):
     def _execute(self, template_file, context):
         command = self._env.get_template(template_file).render(context)
         logger.debug(command)
-        return self.execute(command)
+        return self.execute(command, receive_output=True)
 
     def get_document_thumbnail(
         self,
@@ -254,7 +254,6 @@ class Kevlar(object):
         :return: `dict` of the following schema, or `None` if no valid layer is
             specified.
 
-
         Schema:
 
         .. code-block:: none
@@ -304,6 +303,67 @@ class Kevlar(object):
         """
         response = self._execute(
             'sendLayerShapeToNetworkClient.js.j2', locals()
+        )
+        if response.get('body'):
+            return json.loads(response.get('body'))
+        return None
+
+    def get_document_info(
+        self,
+        version=None,
+        document=None,
+        placed_ids=None,
+        layer=None,
+        expand_smart_objects=False,
+        get_text_styles=False,
+        get_full_text_styles=False,
+        get_default_layer_effect=False,
+        get_comp_layer_settings=False,
+        get_path_data=False,
+        image_info=None,
+        comp_info=None,
+        layer_info=True,
+        include_ancestors=True,
+    ):
+        """
+        Return complete document info in JSON format.
+
+        :param version: optional requested version (you always get the current
+            version back, but this does a sanity check, and errors on an
+            incompatible version). Example: '1.4.0'.
+        :param placed_ids: Photoshop 16.1 and later, optional. reference smart
+            object(s) within the document series of "ID" from
+            layer:smartObject:{} or "placedID" from "image:placed:[{}]".
+        :param layer: `None` for all layers in photoshop, or
+            specify one of the following:
+            - integer ID of a single layer, e.g. `0`.
+            - (`first`, `last`) tuple of layer IDs, e.g., (1, 6).
+            - `'selected'` for currently selected layers.
+        :param expand_smart_objects: default is false, recursively get doc info
+            for any smart objects. can be slow.
+        :param get_text_styles: default is false, return more detailed text
+            info. can be slow.
+        :param get_full_text_styles: default is false, return all text
+            information (getTextStyles must also be true).
+        :param get_default_layer_effect: default is false, return all layer fx
+            even if they are disabled.
+        :param get_comp_layer_settings: default is false, enumerate layer
+            settings in layer comps.
+        :param get_path_data: default is false, return path control points for
+            shapes.
+        :param image_info: return image-wide info (size, resolution etc.),
+            default is `layer` != 'selected'.
+        :param comp_info: return comp info in "comps" array, default is true,
+            default is `layer` != 'selected'.
+        :param layer_info: return layer info in "layers" array, default is true.
+        :param include_ancestors: 16.1 and later, include surrounding layer
+            groups if doing selected layers/range/single layer id. default is
+            true. should only be used with single layers (otherwise grouping
+            may not be accurate).
+        :return: `dict`.
+        """
+        response = self._execute(
+            'sendDocumentInfoToNetworkClient.js.j2', locals()
         )
         if response.get('body'):
             return json.loads(response.get('body'))

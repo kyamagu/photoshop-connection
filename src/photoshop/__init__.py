@@ -65,11 +65,12 @@ class PhotoshopConnection(Kevlar):
     @contextlib.contextmanager
     def _transaction(self):
         try:
+            logger.debug('Transaction %d' % self.transaction_id)
             yield self.transaction_id
         finally:
             self.transaction_id += 1
 
-    def execute(self, script):
+    def execute(self, script, receive_output=False):
         """
         Execute the given ExtendScript in Photoshop.
 
@@ -84,6 +85,12 @@ class PhotoshopConnection(Kevlar):
                 self.socket, ContentType.SCRIPT, script.encode('utf-8'), txn
             )
             response = self.protocol.receive(self.socket)
+            if receive_output:
+                second_response = self.protocol.receive(self.socket)
+                if response.get('body') == b'[ActionDescriptor]':
+                    response = second_response
+
+            logger.debug(response)
             if response.get('transaction') is not None:
                 assert response['transaction'] == txn
 
