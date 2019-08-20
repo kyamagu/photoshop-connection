@@ -21,7 +21,7 @@ class ContentType(enum.IntEnum):
 
 class Pixmap(object):
     """
-    Pixmap representing an uncompressed pixels, row-major order.
+    Pixmap representing an uncompressed pixels, ARGB, row-major order.
 
     :ivar width: width of the image.
     :ivar height: height of the image.
@@ -46,7 +46,7 @@ class Pixmap(object):
     @classmethod
     def parse(kls, data):
         """Parse Pixmap from data."""
-        assert len(data) > 15
+        assert len(data) >= 14
         return kls(*(unpack('>3I3B', data[:15]) + (data[15:], )))
 
     def dump(self):
@@ -56,8 +56,17 @@ class Pixmap(object):
             self.channels, self.bits
         ) + self.data
 
+    def topil(self):
+        """Convert to PIL Image."""
+        from PIL import Image
+        if self.width == 0 or self.height == 0:
+            return None
+        return Image.frombytes(
+            'RGBA', (self.width, self.height), self.data, 'raw', 'ARGB', 0, 1
+        )
+
     def __repr__(self):
-        return 'Pixmap(width=%d, height=%d, color=%d, bits=%d, %r)' % (
+        return 'Pixmap(width=%d, height=%d, color=%d, bits=%d, data=%r)' % (
             self.width, self.height, self.color_mode, self.bits,
             self.data if len(self.data) < 12 else self.data[:12] + b'...'
         )

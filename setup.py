@@ -26,6 +26,7 @@ setup(
     ],
     package_dir={'': 'src'},
     packages=find_packages('src'),
+    package_data={'photoshop': ['api/*.js.j2']},
     install_requires=[
         'cryptography',
         'jinja2',

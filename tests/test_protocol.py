@@ -1,9 +1,18 @@
+import pytest
 from photoshop.protocol import Pixmap
-from .mock import script_server, jpeg_server, pixmap_server, PASSWORD
 
 
-def test_pixmap():
-    pixmap = Pixmap(2, 2, 8, 3, 3, 8, b'\x00' * 16)
+@pytest.mark.parametrize(
+    'args', [
+        (2, 2, 8, 3, 3, 8, b'\x00' * 16),
+        (0, 0, 0, 3, 0, 0, b''),
+    ]
+)
+def test_pixmap(args):
+    from PIL import Image
+    pixmap = Pixmap(*args)
     data = pixmap.dump()
     assert Pixmap.parse(data).dump() == data
     pixmap.__repr__()
+    image = pixmap.topil()
+    assert image is None or isinstance(image, Image.Image)
