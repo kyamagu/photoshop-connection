@@ -10,6 +10,9 @@ Open the plug-ins dialog from the `Preferences` > `Plug-ins...` menu in
 Photoshop, and check `Enable Remote Connections` option. Enter password to the
 given field, and click `OK` button and restart Photoshop.
 
+.. image:: _static/password-dialog.png
+    :alt: Password dialog
+
 Photoshop must be launched and running for the package to work.
 
 
