@@ -1,0 +1,109 @@
+var idNS = stringIDToTypeID("sendLayerThumbnailToNetworkClient");
+var desc1 = new ActionDescriptor();
+{% if document %}
+desc1.putInteger(stringIDToTypeID("documentID"), {{document}});
+{% endif %}
+desc1.putInteger(stringIDToTypeID("width"), {{max_width}});
+desc1.putInteger(stringIDToTypeID("height"), {{max_height}});
+desc1.putInteger(stringIDToTypeID("format"), 2);
+{% if placed_ids %}
+var placedList = new ActionList();
+{% for placed_id in placed_ids %}
+placedList.putString("{{placed_id}}");
+{% endfor %}
+desc1.putList(stringIDToTypeID("placedID"), placedList);
+{% endif %}
+{% if convert_rgb_profile %}
+desc1.putBoolean(stringIDToTypeID("convertToWorkingRGBProfile"), true);
+{% endif %}
+{% if icc_profile %}
+desc1.putString(stringIDToTypeID("useICCProfile"), "{{icc_profile}}");
+{% endif %}
+{% if interpolation %}
+desc1.putEnumerated(
+    stringIDToTypeID("interpolation"),
+    stringIDToTypeID("interpolationType"),
+    stringIDToTypeID("{{interpolation}}")
+);
+{% endif %}
+{% if transform %}
+var transform1 = new ActionDescriptor();
+transform1.putInteger(stringIDToTypeID("width"), {{transform['scale_x']}});
+transform1.putInteger(stringIDToTypeID("height"), {{transform['scale_y']}});
+{% if transform.get('interpolation') %}
+transform1.putEnumerated(
+    stringIDToTypeID("interpolation"),
+    stringIDToTypeID("interpolationType"),
+    stringIDToTypeID("{{transform['interpolation']}}")
+);
+{% endif %}
+{% if transform.get('dumb_scaling') %}
+transform1.putBoolean(stringIDToTypeID("forceDumbScaling"), true);
+{% endif %}
+desc1.putObject(stringIDToTypeID("transform"), stringIDToTypeID("transform"), transform1);
+{% endif %}
+{% if layer is iterable %}
+desc1.putInteger(stringIDToTypeID("firstLayer"), {{layer[0]}});
+desc1.putInteger(stringIDToTypeID("lastLayer"), {{layer[1]}});
+{% if layer_settings %}
+var settings = new ActionList();
+{% for setting in layer_settings %}
+{
+    var setting = new ActionDescriptor();
+    {# TODO: fill in image_settings #}
+    settings.putObject(stringIDToTypeID("layerSettings"), setting);
+}
+{% endfor %}
+desc1.putList(stringIDToTypeID("layerSettings"), settings);
+{% endif %}
+{% elif layer is number %}
+desc1.putInteger(stringIDToTypeID("layerID"), {{layer}});
+{% else %}
+desc1.putBoolean(stringIDToTypeID("selectedLayers"), true);
+{% endif %}
+{% if image_settings %}
+var image_settings = new ActionDescriptor();
+{# TODO: fill in image_settings #}
+desc1.putObject(stringIDToTypeID("imageSettings"), imageSettingsObject)
+{% endif %}
+{% if include_layers %}
+{% for key in include_layers %}
+desc1.putEnumerated(
+    stringIDToTypeID("include{{key|title}}"),
+    stringIDToTypeID("includeLayers"),
+    stringIDToTypeID("include{{includeLayers[key]|title}}")
+);
+{% endfor %}
+{% endif %}
+{% if clip_bounds %}
+desc1.putBoolean(stringIDToTypeID("clipToDocumentBounds"), true);
+{% if isinstance(clip_bounds, (list, tuple)) %}
+var clipBounds = new ActionDescriptor();
+clipBounds.putInteger(stringIDToTypeID("top"), {{clip_bounds[0]}});
+clipBounds.putInteger(stringIDToTypeID("left"), {{clip_bounds[1]}});
+clipBounds.putInteger(stringIDToTypeID("right"), {{clip_bounds[2]}});
+clipBounds.putInteger(stringIDToTypeID("bottom"), {{clip_bounds[3]}});
+desc1.putObject(stringIDToTypeID("clipBounds"), stringIDToTypeID("clipBounds"), clipBounds);
+{% endif %}
+{% endif %}
+{% if bounds %}
+desc1.putBoolean(stringIDToTypeID("bounds"), true);
+{% endif %}
+{% if bounds_only %}
+desc1.putBoolean(stringIDToTypeID("boundsOnly"), true);
+{% endif %}
+{% if thread %}
+desc1.putBoolean(stringIDToTypeID("thread"), true);
+{% endif %}
+{% if layer_comp_id %}
+desc1.putInteger(stringIDToTypeID("compID"), {{layer_comp_id}});
+{% elif layer_comp_index %}
+desc1.putInteger(stringIDToTypeID("compIndex"), {{layer_comp_index}});
+{% endif %}
+{% if not dither %}
+desc1.putBoolean(stringIDToTypeID("allowDither"), false);
+{% endif %}
+{% if not color_dither %}
+desc1.putBoolean(stringIDToTypeID("useColorSettingsDither"), false);
+{% endif %}
+executeAction(idNS, desc1, DialogModes.NO);
