@@ -329,7 +329,7 @@ class Kevlar(object):
         image_info=None,
         comp_info=None,
         layer_info=True,
-        include_ancestors=True,
+        include_ancestors=True
     ):
         """
         Return complete document info in JSON format.
@@ -337,6 +337,7 @@ class Kevlar(object):
         :param version: optional requested version (you always get the current
             version back, but this does a sanity check, and errors on an
             incompatible version). Example: '1.4.0'.
+        :param document: optional document id, uses active doc if not specified.
         :param placed_ids: Photoshop 16.1 and later, optional. reference smart
             object(s) within the document series of "ID" from
             layer:smartObject:{} or "placedID" from "image:placed:[{}]".
@@ -369,10 +370,64 @@ class Kevlar(object):
         :return: `dict`.
         :raise RuntimeError: if error happens in remote.
         """
+        # TODO: Implement whichInfo option.
         response = self._execute(
             'sendDocumentInfoToNetworkClient.js.j2', locals()
         )
         assert response['content_type'] == ContentType.SCRIPT
         if response.get('body'):
             return json.loads(response.get('body').decode('utf-8'))
+        return None
+
+    def get_document_stream(
+        self,
+        document=None,
+        placed_ids=None,
+        placed_id=None,
+        layer=None,
+        position=None,
+        size=None,
+        path=None
+    ):
+        """
+        Return complete document info in JSON format.
+
+        :param document: optional document id, uses active doc if not specified.
+        :param placed_ids: Photoshop 16.1 and later, optional. reference smart
+            object(s) within the document series of "ID" from
+            layer:smartObject:{} or "placedID" from "image:placed:[{}]".
+        :param placed_id: return file for smart object with this placed id ("ID"
+            from layer:smartObject:{} or "placedID" from "image:placed:[{}]").
+        :param layer: when integer ID of a single layer is specified, e.g. `0`,
+            return file for smart object with this layer id. When `placed_id` is
+            `None` and layer is also `None`, return placed smart object stream
+            the selected layers
+        :param position: offset into file (defaults to 0).
+        :param size: number of bytes to return (defaults to all bytes).
+        :param path: instead of returning the file stream back over the wire,
+            write it to a file local to the server, and return the path as a
+            string argument in the JSON part of the FileStream Reply.
+        :return: `dict` with the following fields:
+
+            - `mimeFormat`: mime string.
+            - `position` : position of file data returned.
+            - `size` : number of file bytes returned.
+            - `fullSize` : total number of bytes in file.
+            - `path` : string, server-local path to file if path was set to true
+              in the request).
+            - `data`: actual data in bytes. if `path` is True, this is empty.
+
+        :raise RuntimeError: if error happens in remote.
+
+        .. note:: The maximum size returned by PS is 2 GB, if you have a smart
+            object bigger than 2 GB, you need to use the position/size format.
+            To return chunks, or the path format to write it to a temp file.
+            Document stream/attributes are returned as a FileStream Reply.
+        """
+        response = self._execute(
+            'sendDocumentStreamToNetworkClient.js.j2', locals()
+        )
+        # assert response['content_type'] == ContentType.FILE_STREAM
+        if response.get('body'):
+            return response.get('body')
         return None

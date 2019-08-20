@@ -4,22 +4,22 @@ var desc = new ActionDescriptor();
 desc.putString(stringIDToTypeID("version"), "{{version}}");
 {% endif %}
 {% if document %}
-desc1.putInteger(stringIDToTypeID("documentID"), {{document}});
+desc.putInteger(stringIDToTypeID("documentID"), {{document}});
 {% endif %}
 {% if placed_ids %}
 var placedList = new ActionList();
     {% for placed_id in placed_ids %}
 placedList.putString("{{placed_id}}");
     {% endfor %}
-desc1.putList(stringIDToTypeID("placedID"), placedList);
+desc.putList(stringIDToTypeID("placedID"), placedList);
 {% endif %}
 {% if layer is iterable %}
-desc1.putInteger(stringIDToTypeID("firstLayer"), {{layer[0]}});
-desc1.putInteger(stringIDToTypeID("lastLayer"), {{layer[1]}});
+desc.putInteger(stringIDToTypeID("firstLayer"), {{layer[0]}});
+desc.putInteger(stringIDToTypeID("lastLayer"), {{layer[1]}});
 {% elif layer is number %}
-desc1.putInteger(stringIDToTypeID("layerID"), {{layer}});
+desc.putInteger(stringIDToTypeID("layerID"), {{layer}});
 {% elif layer == 'selected' %}
-desc1.putBoolean(stringIDToTypeID("selectedLayers"), true);
+desc.putBoolean(stringIDToTypeID("selectedLayers"), true);
 {% endif %}
 {% if expand_smart_objects %}
 desc.putBoolean(stringIDToTypeID("expandSmartObjects"), true);

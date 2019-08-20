@@ -1,5 +1,6 @@
 import enum
 import logging
+import json
 from struct import pack, unpack
 
 from photoshop.crypto import EncryptDecrypt
@@ -155,6 +156,8 @@ class Protocol(object):
             body = data[12:]
             if content_type == ContentType.IMAGE:
                 body = self._parse_image(body)
+            elif content_type == ContentType.FILE_STREAM:
+                body = self._parse_file_stream(body)
 
             return dict(
                 status=status,
@@ -172,3 +175,10 @@ class Protocol(object):
         elif image_type == 2:
             return dict(image_type=image_type, data=Pixmap.parse(data[1:]))
         raise ValueError('Unsupported image type: %d' % image_type)
+
+    def _parse_file_stream(self, data):
+        assert len(data) >= 4
+        length = unpack('>I', data[:4])[0]
+        info = json.loads(data[4:length + 4])
+        info['data'] = data[4 + length:]
+        return info
