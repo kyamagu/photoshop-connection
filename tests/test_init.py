@@ -1,4 +1,5 @@
 import pytest
+from photoshop.version import __version__
 from photoshop import PhotoshopConnection, ContentType
 from photoshop.protocol import Pixmap
 from .mock import (
@@ -49,7 +50,7 @@ def test_connection_pixmap(pixmap_server):
 
 def test_connection_refused():
     with pytest.raises(ConnectionRefusedError):
-        conn = PhotoshopConnection(PASSWORD)
+        PhotoshopConnection(PASSWORD, host='localhost', port='22')
 
 
 def test_connection_error(error_server):
