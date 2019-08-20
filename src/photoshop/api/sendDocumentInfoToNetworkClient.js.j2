@@ -1,7 +1,7 @@
-var idNS = stringIDToTypeID( "sendDocumentInfoToNetworkClient" );
+var idNS = stringIDToTypeID("sendDocumentInfoToNetworkClient");
 var desc = new ActionDescriptor();
 {% if version %}
-desc.putString( stringIDToTypeID( "version" ), "{{version}}");
+desc.putString(stringIDToTypeID("version"), "{{version}}");
 {% endif %}
 {% if document %}
 desc1.putInteger(stringIDToTypeID("documentID"), {{document}});
@@ -22,33 +22,33 @@ desc1.putInteger(stringIDToTypeID("layerID"), {{layer}});
 desc1.putBoolean(stringIDToTypeID("selectedLayers"), true);
 {% endif %}
 {% if expand_smart_objects %}
-desc.putBoolean( stringIDToTypeID( "expandSmartObjects" ), true);
+desc.putBoolean(stringIDToTypeID("expandSmartObjects"), true);
 {% endif %}
 {% if get_text_styles %}
-desc.putBoolean( stringIDToTypeID( "getTextStyles" ), true);
+desc.putBoolean(stringIDToTypeID("getTextStyles"), true);
 {% endif %}
 {% if get_full_text_styles %}
-desc.putBoolean( stringIDToTypeID( "getFullTextStyles" ), true);
+desc.putBoolean(stringIDToTypeID("getFullTextStyles"), true);
 {% endif %}
 {% if get_default_layer_effect %}
-desc.putBoolean( stringIDToTypeID( "getDefaultLayerFX" ), true);
+desc.putBoolean(stringIDToTypeID("getDefaultLayerFX"), true);
 {% endif %}
 {% if get_comp_layer_settings %}
-desc.putBoolean( stringIDToTypeID( "getCompLayerSettings" ), true);
+desc.putBoolean(stringIDToTypeID("getCompLayerSettings"), true);
 {% endif %}
 {% if get_path_data %}
-desc.putBoolean( stringIDToTypeID( "getPathData" ), true);
+desc.putBoolean(stringIDToTypeID("getPathData"), true);
 {% endif %}
 {% if image_info is not none %}
-desc.putBoolean( stringIDToTypeID( "imageInfo" ), {{image_info|lower}});
+desc.putBoolean(stringIDToTypeID("imageInfo"), {{image_info|lower}});
 {% endif %}
 {% if comp_info is not none %}
-desc.putBoolean( stringIDToTypeID( "compInfo" ), {{comp_info|lower}});
+desc.putBoolean(stringIDToTypeID("compInfo"), {{comp_info|lower}});
 {% endif %}
 {% if not layer_info %}
-desc.putBoolean( stringIDToTypeID( "layerInfo" ), false});
+desc.putBoolean(stringIDToTypeID("layerInfo"), false});
 {% endif %}
 {% if not include_ancestors %}
-desc.putBoolean( stringIDToTypeID( "includeAncestors" ), false);
+desc.putBoolean(stringIDToTypeID("includeAncestors"), false);
 {% endif %}
-executeAction( idNS, desc, DialogModes.NO );
+executeAction(idNS, desc, DialogModes.NO);
