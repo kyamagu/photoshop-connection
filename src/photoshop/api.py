@@ -36,7 +36,8 @@ class Kevlar(object):
         :param placed_ids: Photoshop 16.1 and later, optional. reference smart
             object(s) within the document series of "ID" from
             layer:smartObject:{} or "placedID" from "image:placed:[{}]".
-        :param: JPEG bytes if format is 1, or Pixmap object if format is 2.
+        :return: JPEG bytes if `format` is 1, or
+            :py:class:`~photoshop.protocol.Pixmap` if `format` is 2.
         """
         response = self._execute(
             'sendDocumentThumbnailToNetworkClient.js.j2', locals()
@@ -66,6 +67,7 @@ class Kevlar(object):
         color_dither=True,
     ):
         """
+        :param document: optional document id, uses active doc if not specified.
         :param max_width: maximum width of thumbnail.
         :param max_height: maximum height of thumbnail.
         :param placed_ids: Photoshop 16.1 and later, optional. reference smart
@@ -213,6 +215,8 @@ class Kevlar(object):
             then dithering will occur, otherwise there will be no dithering.
         :param color_dither: see above.
 
+        :return: :py:class:`~photoshop.protocol.Pixmap` or `None`.
+
 
         .. note:: "interpolation", "transform", "bounds", "boundsOnly", and
             "thread" are supported in background-only (layer-less) documents
@@ -228,4 +232,4 @@ class Kevlar(object):
         response = self._execute(
             'sendLayerThumbnailToNetworkClient.js.j2', locals()
         )
-        return response.get('body')
+        return response.get('body', {}).get('data')

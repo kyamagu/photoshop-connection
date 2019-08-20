@@ -20,9 +20,10 @@ setup(
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License (MIT)',
+        'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
         'Topic :: Software Development :: Libraries',
+        'Topic :: Multimedia :: Graphics',
     ],
     package_dir={'': 'src'},
     packages=find_packages('src'),
@@ -31,7 +32,11 @@ setup(
         'cryptography',
         'jinja2',
     ],
-    entry_points={
-        'console_scripts': ['photoshop-connection = photoshop.__main__:main'],
-    },
+    extras_require={
+        'validate': ['esprima'],
+        'pillow': ['pillow'],
+    }
+    # entry_points={
+    #     'console_scripts': ['photoshop-connection = photoshop.__main__:main'],
+    # },
 )

@@ -9,20 +9,30 @@ logger = logging.getLogger(__name__)
 
 
 class PhotoshopConnection(Kevlar):
-    def __init__(self, password, host='localhost', port=49494):
-        """
-        Execute the given ExtendScript in Photoshop.
+    """
+    Execute the given ExtendScript in Photoshop.
 
-        :param password: Password for the connection, configured in Photoshop.
-        :param host: IP address of Photoshop host, default `localhost`.
-        :param port: Connection port default to 49494.
-        :throw ConnectionRefusedError: ConnectionRefusedError
-        """
+    :param password: Password for the connection, configured in Photoshop.
+    :param host: IP address of Photoshop host, default `localhost`.
+    :param port: Connection port default to 49494.
+    :param validator: Validate function for ECMAscript.
+
+        Example::
+
+            from esprima import parseScript
+            with PhotoshopConnection(password='secret', validator=parseScript) as c:
+                c.execute('bad_script +')  # Raises an Error
+
+    :raises ConnectionRefusedError: if failed to connect to Photoshop.
+    """
+
+    def __init__(self, password, host='localhost', port=49494, validator=None):
         self.transaction_id = 0
         self.protocol = Protocol(password)
         self.host = host
         self.port = port
         self.socket = None
+        self.validator = validator
         self._reset_connection()
 
     def __del__(self):
@@ -66,6 +76,9 @@ class PhotoshopConnection(Kevlar):
         :param script: ExtendScript to execute in Photoshop.
         :return: `dict`. See :py:meth:`~photoshop.protocol.Protocol.receive`
         """
+        if self.validator:
+            self.validator(script)
+
         with self._transaction() as txn:
             self.protocol.send(
                 self.socket, ContentType.SCRIPT, script.encode('utf-8'), txn
