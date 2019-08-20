@@ -113,6 +113,8 @@ class Protocol(object):
          - `content_type`: data type. See :py:class:`ContentType`.
          - `body`: body of the response data, `dict` for IMAGE type, otherwise
            bytes.
+
+        :raise AssertionError: if response format is invalid.
         """
         header = socket.recv(8)
         assert len(header) == 8, (
