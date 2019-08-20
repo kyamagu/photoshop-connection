@@ -4,7 +4,7 @@ from photoshop import PhotoshopConnection, ContentType
 from photoshop.protocol import Pixmap
 from .mock import (
     script_server, jpeg_server, pixmap_server, error_server,
-    error_image_server, PASSWORD
+    error_image_server, error_string_server, PASSWORD
 )
 
 DOCUMENT_THUMBNAIL_SCRIPT = '''
@@ -50,7 +50,7 @@ def test_connection_pixmap(pixmap_server):
 
 def test_connection_refused():
     with pytest.raises(ConnectionRefusedError):
-        PhotoshopConnection(PASSWORD, host='localhost', port='22')
+        PhotoshopConnection(PASSWORD, host='localhost', port=23)
 
 
 def test_connection_error(error_server):
@@ -62,4 +62,10 @@ def test_connection_error(error_server):
 def test_connection_error_image(error_image_server):
     with PhotoshopConnection(PASSWORD, port=error_image_server[1]) as conn:
         with pytest.raises(ValueError):
+            response = conn.execute(DOCUMENT_THUMBNAIL_SCRIPT)
+
+
+def test_runtime_error(error_string_server):
+    with PhotoshopConnection(PASSWORD, port=error_string_server[1]) as conn:
+        with pytest.raises(RuntimeError):
             response = conn.execute(DOCUMENT_THUMBNAIL_SCRIPT)

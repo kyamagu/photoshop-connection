@@ -5,6 +5,7 @@ https://github.com/adobe-photoshop/generator-core/wiki/Photoshop-Kevlar-API-Addi
 """
 import json
 from jinja2 import Environment, PackageLoader
+from photoshop.protocol import ContentType
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,10 +40,12 @@ class Kevlar(object):
             layer:smartObject:{} or "placedID" from "image:placed:[{}]".
         :return: JPEG bytes if `format` is 1, or
             :py:class:`~photoshop.protocol.Pixmap` if `format` is 2.
+        :raise RuntimeError: if error happens in remote.
         """
         response = self._execute(
             'sendDocumentThumbnailToNetworkClient.js.j2', locals()
         )
+        assert response['content_type'] == ContentType.IMAGE
         return response.get('body', {}).get('data')
 
     def get_layer_thumbnail(
@@ -215,9 +218,8 @@ class Kevlar(object):
             CMYK to RGB, etc),
             then dithering will occur, otherwise there will be no dithering.
         :param color_dither: see above.
-
         :return: :py:class:`~photoshop.protocol.Pixmap` or `None`.
-
+        :raise RuntimeError: if error happens in remote.
 
         .. note:: "interpolation", "transform", "bounds", "boundsOnly", and
             "thread" are supported in background-only (layer-less) documents
@@ -233,6 +235,7 @@ class Kevlar(object):
         response = self._execute(
             'sendLayerThumbnailToNetworkClient.js.j2', locals()
         )
+        assert response['content_type'] == ContentType.IMAGE
         return response.get('body', {}).get('data')
 
     def get_layer_shape(
@@ -300,12 +303,15 @@ class Kevlar(object):
                 "defaultFill":false},
             "fill":{"color":{"red":0,"green":0,"blue":0},"class":"solidColorLayer"}
             }
+
+        :raise RuntimeError: if error happens in remote.
         """
         response = self._execute(
             'sendLayerShapeToNetworkClient.js.j2', locals()
         )
+        assert response['content_type'] == ContentType.SCRIPT
         if response.get('body'):
-            return json.loads(response.get('body'))
+            return json.loads(response.get('body').decode('utf-8'))
         return None
 
     def get_document_info(
@@ -361,10 +367,12 @@ class Kevlar(object):
             true. should only be used with single layers (otherwise grouping
             may not be accurate).
         :return: `dict`.
+        :raise RuntimeError: if error happens in remote.
         """
         response = self._execute(
             'sendDocumentInfoToNetworkClient.js.j2', locals()
         )
+        assert response['content_type'] == ContentType.SCRIPT
         if response.get('body'):
-            return json.loads(response.get('body'))
+            return json.loads(response.get('body').decode('utf-8'))
         return None

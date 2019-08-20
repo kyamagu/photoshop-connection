@@ -26,12 +26,12 @@ def test_get_layer_shape(script_output_server):
         PASSWORD, port=script_output_server[1], validator=parseScript
     ) as conn:
         shape_info = conn.get_layer_shape()
-        assert shape_info is None
+        assert isinstance(shape_info, dict)
 
 
 def test_get_document_info(script_output_server):
     with PhotoshopConnection(
         PASSWORD, port=script_output_server[1], validator=parseScript
     ) as conn:
-        shape_info = conn.get_layer_shape()
-        assert shape_info is None
+        document_info = conn.get_document_info()
+        assert isinstance(document_info, dict)

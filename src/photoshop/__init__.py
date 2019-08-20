@@ -23,7 +23,7 @@ class PhotoshopConnection(Kevlar):
             with PhotoshopConnection(password='secret', validator=parseScript) as c:
                 c.execute('bad_script +')  # Raises an Error
 
-    :raises ConnectionRefusedError: if failed to connect to Photoshop.
+    :raise ConnectionRefusedError: if failed to connect to Photoshop.
     """
 
     def __init__(self, password, host='localhost', port=49494, validator=None):
@@ -76,6 +76,8 @@ class PhotoshopConnection(Kevlar):
 
         :param script: ExtendScript to execute in Photoshop.
         :return: `dict`. See :py:meth:`~photoshop.protocol.Protocol.receive`
+
+        :raise RuntimeError: if error happens in remote.
         """
         if self.validator:
             self.validator(script)
@@ -89,6 +91,9 @@ class PhotoshopConnection(Kevlar):
                 second_response = self.protocol.receive(self.socket)
                 if response.get('body') == b'[ActionDescriptor]':
                     response = second_response
+
+            if response['content_type'] == ContentType.ERROR_STRING:
+                raise RuntimeError(response.get('body', b'').decode())
 
             logger.debug(response)
             if response.get('transaction') is not None:

@@ -24,7 +24,7 @@ class ScriptHandler(PhotoshopHandler):
 class ScriptOutputHandler(PhotoshopHandler):
     def handle(self):
         request = self.protocol.receive(self.request)
-        self.protocol.send(self.request, ContentType.SCRIPT, b'null')
+        self.protocol.send(self.request, ContentType.SCRIPT, b'{}')
         self.protocol.send(
             self.request, ContentType.SCRIPT, b'[ActionDescriptor]'
         )
@@ -65,6 +65,12 @@ class ErrorHandler(BaseRequestHandler):
     def handle(self):
         self.request.recv(1024)
         self.request.sendall(b'\x00\x00\x00\x04\x00\x00\x00\x01')
+
+
+class ErrorStringHandler(PhotoshopHandler):
+    def handle(self):
+        self.request.recv(1024)
+        self.protocol.send(self.request, ContentType.ERROR_STRING, b'ERROR')
 
 
 @contextlib.contextmanager
@@ -116,4 +122,10 @@ def error_server():
 @pytest.yield_fixture
 def error_image_server():
     with serve(ErrorImageHandler) as server:
+        yield server
+
+
+@pytest.yield_fixture
+def error_string_server():
+    with serve(ErrorStringHandler) as server:
         yield server
