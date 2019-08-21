@@ -148,11 +148,6 @@ class Protocol(object):
             assert len(data) >= 12
             protocol, transaction, content_type = unpack('>3I', data[:12])
             assert protocol == self.VERSION
-            logger.debug(
-                'protocol = %d, transaction = %d, content type = %d' %
-                (protocol, transaction, content_type)
-            )
-
             body = data[12:]
             if content_type == ContentType.IMAGE:
                 body = self._parse_image(body)

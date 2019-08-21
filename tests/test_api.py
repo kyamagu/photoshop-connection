@@ -2,7 +2,10 @@ import pytest
 from esprima import parseScript
 from photoshop import PhotoshopConnection
 from photoshop.protocol import Pixmap
-from .mock import (script_output_server, jpeg_server, pixmap_server, PASSWORD)
+from .mock import (
+    script_output_server, jpeg_server, pixmap_server, filestream_server,
+    PASSWORD
+)
 
 
 def test_get_document_thumbnail(jpeg_server):
@@ -34,4 +37,12 @@ def test_get_document_info(script_output_server):
         PASSWORD, port=script_output_server[1], validator=parseScript
     ) as conn:
         document_info = conn.get_document_info()
+        assert isinstance(document_info, dict)
+
+
+def test_get_document_stream(filestream_server):
+    with PhotoshopConnection(
+        PASSWORD, port=filestream_server[1], validator=parseScript
+    ) as conn:
+        document_info = conn.get_document_stream()
         assert isinstance(document_info, dict)

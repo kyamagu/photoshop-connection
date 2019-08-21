@@ -4,7 +4,6 @@ Kevlar API wrappers.
 https://github.com/adobe-photoshop/generator-core/wiki/Photoshop-Kevlar-API-Additions-for-Generator
 """
 import json
-from jinja2 import Environment, PackageLoader
 from photoshop.protocol import ContentType
 import logging
 
@@ -13,14 +12,6 @@ logger = logging.getLogger(__name__)
 
 class Kevlar(object):
     """Kevlar API wrappers."""
-    _env = Environment(
-        loader=PackageLoader('photoshop', 'api'), trim_blocks=True
-    )
-
-    def _execute(self, template_file, context):
-        command = self._env.get_template(template_file).render(context)
-        logger.debug(command)
-        return self.execute(command, receive_output=True)
 
     def get_document_thumbnail(
         self,
@@ -31,6 +22,8 @@ class Kevlar(object):
         placed_ids=None
     ):
         """
+        Send a thumbnail of a document's composite.
+
         :param document: optional document id, uses active doc if not specified.
         :param max_width: maximum width of thumbnail.
         :param max_height: maximum height of thumbnail.
@@ -43,7 +36,9 @@ class Kevlar(object):
         :raise RuntimeError: if error happens in remote.
         """
         response = self._execute(
-            'sendDocumentThumbnailToNetworkClient.js.j2', locals()
+            'sendDocumentThumbnailToNetworkClient.js.j2',
+            locals(),
+            receive_output=True
         )
         assert response['content_type'] == ContentType.IMAGE
         return response.get('body', {}).get('data')
@@ -71,6 +66,9 @@ class Kevlar(object):
         color_dither=True
     ):
         """
+        Send a thumbnail of layer composite, or a range of layers, with optional
+        settings/transform applied.
+
         :param document: optional document id, uses active doc if not specified.
         :param max_width: maximum width of thumbnail.
         :param max_height: maximum height of thumbnail.
@@ -233,7 +231,9 @@ class Kevlar(object):
             inside a group with no group layers at all.
         """
         response = self._execute(
-            'sendLayerThumbnailToNetworkClient.js.j2', locals()
+            'sendLayerThumbnailToNetworkClient.js.j2',
+            locals(),
+            receive_output=True
         )
         assert response['content_type'] == ContentType.IMAGE
         return response.get('body', {}).get('data')
@@ -307,12 +307,12 @@ class Kevlar(object):
         :raise RuntimeError: if error happens in remote.
         """
         response = self._execute(
-            'sendLayerShapeToNetworkClient.js.j2', locals()
+            'sendLayerShapeToNetworkClient.js.j2',
+            locals(),
+            receive_output=True
         )
         assert response['content_type'] == ContentType.SCRIPT
-        if response.get('body'):
-            return json.loads(response.get('body').decode('utf-8'))
-        return None
+        return json.loads(response.get('body', b'{}').decode('utf-8'))
 
     def get_document_info(
         self,
@@ -372,12 +372,12 @@ class Kevlar(object):
         """
         # TODO: Implement whichInfo option.
         response = self._execute(
-            'sendDocumentInfoToNetworkClient.js.j2', locals()
+            'sendDocumentInfoToNetworkClient.js.j2',
+            locals(),
+            receive_output=True
         )
         assert response['content_type'] == ContentType.SCRIPT
-        if response.get('body'):
-            return json.loads(response.get('body').decode('utf-8'))
-        return None
+        return json.loads(response.get('body', b'{}').decode('utf-8'))
 
     def get_document_stream(
         self,
@@ -390,7 +390,7 @@ class Kevlar(object):
         path=None
     ):
         """
-        Return complete document info in JSON format.
+        Get the file info and file stream for a smart object.
 
         :param document: optional document id, uses active doc if not specified.
         :param placed_ids: Photoshop 16.1 and later, optional. reference smart
@@ -425,9 +425,9 @@ class Kevlar(object):
             Document stream/attributes are returned as a FileStream Reply.
         """
         response = self._execute(
-            'sendDocumentStreamToNetworkClient.js.j2', locals()
+            'sendDocumentStreamToNetworkClient.js.j2',
+            locals(),
+            receive_output=True
         )
-        # assert response['content_type'] == ContentType.FILE_STREAM
-        if response.get('body'):
-            return response.get('body')
-        return None
+        assert response['content_type'] == ContentType.FILE_STREAM
+        return response.get('body')

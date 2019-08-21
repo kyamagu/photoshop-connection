@@ -24,13 +24,13 @@ def test_connection_script(script_server):
     assert response['protocol'] == 1
     assert response['transaction'] == 0
     assert response['content_type'] == ContentType.SCRIPT
-    assert response['body'] == b'null'
+    assert response['body'] == b'{}'
     conn.__del__()  # This is not elegant.
 
 
 def test_connection_jpeg(jpeg_server):
     with PhotoshopConnection(PASSWORD, port=jpeg_server[1]) as conn:
-        response = conn.execute(DOCUMENT_THUMBNAIL_SCRIPT)
+        response = conn.execute(DOCUMENT_THUMBNAIL_SCRIPT, True)
         assert response['status'] == 0
         assert response['protocol'] == 1
         assert response['transaction'] == 0
@@ -53,10 +53,10 @@ def test_connection_refused():
         PhotoshopConnection(PASSWORD, host='localhost', port=23)
 
 
-def test_connection_error(error_server):
+def test_connection_illegal(error_server):
     with PhotoshopConnection(PASSWORD, port=error_server[1]) as conn:
-        response = conn.execute(DOCUMENT_THUMBNAIL_SCRIPT)
-        assert response['status'] > 0
+        with pytest.raises(RuntimeError):
+            response = conn.execute(DOCUMENT_THUMBNAIL_SCRIPT)
 
 
 def test_connection_error_image(error_image_server):
@@ -69,3 +69,13 @@ def test_runtime_error(error_string_server):
     with PhotoshopConnection(PASSWORD, port=error_string_server[1]) as conn:
         with pytest.raises(RuntimeError):
             response = conn.execute(DOCUMENT_THUMBNAIL_SCRIPT)
+
+
+def test_upload(script_server):
+    with PhotoshopConnection(PASSWORD, port=script_server[1]) as conn:
+        conn.upload(b'\x00\x00\x00\x00')
+
+
+def test_ping(script_server):
+    with PhotoshopConnection(PASSWORD, port=script_server[1]) as conn:
+        conn.ping()
