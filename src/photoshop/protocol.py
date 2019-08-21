@@ -174,6 +174,6 @@ class Protocol(object):
     def _parse_file_stream(self, data):
         assert len(data) >= 4
         length = unpack('>I', data[:4])[0]
-        info = json.loads(data[4:length + 4])
+        info = json.loads(data[4:length + 4].decode('utf-8'))
         info['data'] = data[4 + length:]
         return info
