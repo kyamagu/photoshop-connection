@@ -1,6 +1,7 @@
 import contextlib
 import socket
 import logging
+import os
 from jinja2 import Environment, PackageLoader
 
 from photoshop.protocol import Protocol, ContentType
@@ -13,7 +14,9 @@ class PhotoshopConnection(Kevlar):
     """
     Photoshop session.
 
-    :param password: Password for the connection, configured in Photoshop.
+    :param password: Password for the connection, configured in Photoshop. If
+        `None`, try to get password from `PHOTOSHOP_PASSWORD` environment
+        variable.
     :param host: IP address of Photoshop host, default `localhost`.
     :param port: Connection port default to 49494.
     :param validator: Validate function for ECMAscript.
@@ -30,7 +33,11 @@ class PhotoshopConnection(Kevlar):
         loader=PackageLoader('photoshop', 'api'), trim_blocks=True
     )
 
-    def __init__(self, password, host='localhost', port=49494, validator=None):
+    def __init__(
+        self, password=None, host='localhost', port=49494, validator=None
+    ):
+        password = password or os.getenv('PHOTOSHOP_PASSWORD')
+        assert password is not None
         self.transaction_id = 0
         self.protocol = Protocol(password)
         self.host = host
@@ -40,15 +47,18 @@ class PhotoshopConnection(Kevlar):
         self._reset_connection()
 
     def __del__(self):
-        self._close_connection()
+        self.close()
 
     def __enter__(self):
         return self
 
     def __exit__(self, ex_type, ex_value, trace):
-        self._close_connection()
+        self.close()
 
-    def _close_connection(self):
+    def close(self):
+        """
+        Close the session.
+        """
         if self.socket:
             logger.debug('Closing the connection.')
             self.socket.close()
@@ -56,7 +66,7 @@ class PhotoshopConnection(Kevlar):
 
     def _reset_connection(self):
         logger.debug('Opening the connection.')
-        self._close_connection()
+        self.close()
         self.transaction_id = 0
         try:
             self.socket = socket.create_connection((self.host, self.port))
@@ -89,7 +99,8 @@ class PhotoshopConnection(Kevlar):
             raise RuntimeError(message)
         if txn is not None and response['transaction'] is not None:
             assert response['transaction'] == txn
-        logger.debug(response)
+        message = '%s' % response
+        logger.debug(message if len(message) < 256 else message[:256] + '...')
 
     def _execute(self, template_file, context, **kwargs):
         command = self._env.get_template(template_file).render(context)
@@ -157,7 +168,7 @@ class PhotoshopConnection(Kevlar):
             path = new_path
         return path
 
-    def open(self, path, file_type=None, smart_object=False):
+    def open_document(self, path, file_type=None, smart_object=False):
         """
         Open the specified document.
 
@@ -199,13 +210,13 @@ class PhotoshopConnection(Kevlar):
             - 'WIRELESSBITMAP'
 
         :param smart_object: open as a smart object.
+        :return: `dict` of response.
         """
         if file_type:
             file_type = 'OpenDocumentType.%s' % file_type.upper()
         else:
             file_type = 'undefined'
-        self._execute('open.js.j2', locals())
-        # TODO: Create and return document wrapper.
+        return self._execute('open.js.j2', locals())
 
     def download(self, path, file_type=None):
         """
@@ -217,7 +228,7 @@ class PhotoshopConnection(Kevlar):
         :return: `dict`. See return type of
             :py:meth:`~PhotoshopConnection.get_document_stream`
         """
-        self.open(path, file_type, True)
+        self.open_document(path, file_type, True)
         data = self.get_document_stream()
         self.execute('activeDocument.close(SaveOptions.DONOTSAVECHANGES)')
         return data
