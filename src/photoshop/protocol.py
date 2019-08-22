@@ -118,6 +118,8 @@ class Protocol(object):
         :raise AssertionError: if response format is invalid.
         """
         header = socket.recv(8)
+        if len(header) == 0:
+            raise OSError('Empty response, likely connection closed.')
         assert len(header) == 8, (
             'Invalid response, likely incorrect password: %r' % header
         )

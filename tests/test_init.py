@@ -1,4 +1,5 @@
 import pytest
+import socket
 from photoshop.version import __version__
 from photoshop import PhotoshopConnection, ContentType
 from photoshop.protocol import Pixmap
@@ -7,7 +8,7 @@ from .mock import (
     error_image_server, error_string_server, PASSWORD
 )
 
-DOCUMENT_THUMBNAIL_SCRIPT = '''
+SCRIPT = '''
 var idNS = stringIDToTypeID( "sendDocumentThumbnailToNetworkClient" );
 var desc1 = new ActionDescriptor();
 desc1.putInteger( stringIDToTypeID( "width" ), 1 );
@@ -30,7 +31,7 @@ def test_connection_script(script_server):
 
 def test_connection_jpeg(jpeg_server):
     with PhotoshopConnection(PASSWORD, port=jpeg_server[1]) as conn:
-        response = conn.execute(DOCUMENT_THUMBNAIL_SCRIPT, True)
+        response = conn.execute(SCRIPT, receive_output=True)
         assert response['status'] == 0
         assert response['protocol'] == 1
         assert response['transaction'] == 0
@@ -40,7 +41,7 @@ def test_connection_jpeg(jpeg_server):
 
 def test_connection_pixmap(pixmap_server):
     with PhotoshopConnection(PASSWORD, port=pixmap_server[1]) as conn:
-        response = conn.execute(DOCUMENT_THUMBNAIL_SCRIPT)
+        response = conn.execute(SCRIPT, receive_output=True)
         assert response['status'] == 0
         assert response['protocol'] == 1
         assert response['transaction'] == 0
@@ -54,21 +55,23 @@ def test_connection_refused():
 
 
 def test_connection_illegal(error_server):
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
     with PhotoshopConnection(PASSWORD, port=error_server[1]) as conn:
         with pytest.raises(RuntimeError):
-            response = conn.execute(DOCUMENT_THUMBNAIL_SCRIPT)
+            response = conn.execute(SCRIPT, timeout=.5)
 
 
 def test_connection_error_image(error_image_server):
     with PhotoshopConnection(PASSWORD, port=error_image_server[1]) as conn:
-        with pytest.raises(ValueError):
-            response = conn.execute(DOCUMENT_THUMBNAIL_SCRIPT)
+        with pytest.raises(RuntimeError):
+            response = conn.execute(SCRIPT, timeout=.5)
 
 
 def test_runtime_error(error_string_server):
     with PhotoshopConnection(PASSWORD, port=error_string_server[1]) as conn:
         with pytest.raises(RuntimeError):
-            response = conn.execute(DOCUMENT_THUMBNAIL_SCRIPT)
+            response = conn.execute(SCRIPT)
 
 
 def test_upload(script_server):

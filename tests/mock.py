@@ -90,7 +90,10 @@ class FileStreamHandler(PhotoshopHandler):
 class ErrorImageHandler(PhotoshopHandler):
     def handle(self):
         request = self.protocol.receive(self.request)
-        self.protocol.send(self.request, ContentType.IMAGE, b'\x03\x00')
+        self.protocol.send(
+            self.request, ContentType.IMAGE, b'\x03\x00',
+            request['transaction']
+        )
 
 
 class IllegalHandler(PhotoshopHandler):
