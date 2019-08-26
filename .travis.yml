@@ -7,14 +7,16 @@ matrix:
     - os: osx
       osx_image: xcode11
       language: shell
+      env: TOXENV=py37
     - os: windows
       language: shell
       before_install:
         - choco install python
         - python -m pip install -U pip
-      env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
+      env:
+        - PATH=/c/Python37:/c/Python37/Scripts:$PATH
+        - TOXENV=py37
 install:
-  - pip install -U pip
-  - pip install tox-travis
+  - pip install -U pip tox-travis
 script:
-  - tox
+  - tox -- --log-cli-level debug
