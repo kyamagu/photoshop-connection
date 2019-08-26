@@ -134,6 +134,10 @@ class PhotoshopConnection(Kevlar):
         """
         if self.socket:
             logger.debug('Closing the connection.')
+            try:
+                self.socket.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
             self.socket.close()
             self.socket = None
         if self.dispatcher:
