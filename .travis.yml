@@ -1,22 +1,32 @@
 language: python
 matrix:
   include:
-    - python: 3.5
-    - python: 3.6
-    - python: 3.7
-    - os: osx
-      osx_image: xcode11
-      language: shell
-      env: TOXENV=py37
-    - os: windows
-      language: shell
-      before_install:
-        - choco install python
-        - python -m pip install -U pip
-      env:
-        - PATH=/c/Python37:/c/Python37/Scripts:$PATH
-        - TOXENV=py37
+  - python: 3.5
+  - python: 3.6
+  - python: 3.7
+  - os: osx
+    osx_image: xcode11
+    language: shell
+    env: TOXENV=py37
+  - os: windows
+    language: shell
+    before_install:
+    - choco install python
+    - python -m pip install -U pip
+    env:
+    - PATH=/c/Python37:/c/Python37/Scripts:$PATH
+    - TOXENV=py37
 install:
-  - pip install -U pip tox-travis
+- pip install -U pip wheel tox-travis
 script:
-  - tox
+- python setup.py sdist
+- pip wheel --no-index --no-deps --wheel-dir dist dist/*.tar.gz
+- tox
+deploy:
+  provider: pypi
+  user: kyamagu
+  password:
+    secure: VlBraAPobx7mFq9pmq08xVi5VKaX0/85Uws/bWNpQwzLg9NJZIitB5nyt/MIsA0JL8u7uhZaJaAVIqpy3bu92ywYV2HIcyvHrL+l0sGYbdL2Xf0PnLACNnX+mM17tuqXz2DN3uop9sc4npfg0YIe3mUKLvG/r2zRsTiLvquhU461LJh1iFgVd6m1SK2tm5e+wP2W0hgoqHvH6IwNdTU9PvljTaqsWqN3aYeyFK0toJZP+KxxdK3BrcYP4/ghkm8ASynYsJs34Ajk/lHBNNcNKNSr3d20onG5PRQHh8o5ZXeDgfejybVPN+EDNGGDi/+CoWZcipMxcqsZS6QDxF2+NswGULiAln4SAcB51ZxxXD0r98CLdVYdb/rtZLXFmYbFrwOGksImSmA6iFUVTO0Oj1AS0G5zjBMPPasMJkyV2XGUjPqtjaN7j+6ACDpYbtLpJ83ZDW4E5ioRDs5d0wOZuBJHIESB3GMgFFfRwCmYjegeGKaTW32QTtc4W1knNLk75dTTrSTT5B3jv4DALVmZfSkDRlsAv1bVZ8sfqMsk6s4rIgGOql2m+FqvBdyawh/J20ISVy3/bVHoSz9OstR4A5hUf8ATrlkhFMK10mGez5DuPNotkRUr37noZXoR6pvxEbvabdKD4L2jEzS/pVX26rbCECuwr9drVBPbLBznghs=
+  on:
+    tags: true
+  skip_existing: true
