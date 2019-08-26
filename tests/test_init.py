@@ -1,11 +1,13 @@
 import pytest
-import socket
+from esprima import parseScript
 from photoshop.version import __version__
 from photoshop import PhotoshopConnection, ContentType
 from photoshop.protocol import Pixmap
 from .mock import (
-    script_server, jpeg_server, pixmap_server, error_server,
-    error_image_server, error_string_server, PASSWORD
+    script_server, script_output_server, jpeg_server, pixmap_server,
+    illegal_server, error_server, error_image_server, error_string_server,
+    error_status_server, error_connection_server, error_transaction_server,
+    PASSWORD
 )
 
 SCRIPT = '''
@@ -54,18 +56,24 @@ def test_connection_refused():
         PhotoshopConnection(PASSWORD, host='localhost', port=23)
 
 
-def test_connection_illegal(error_server):
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
-    with PhotoshopConnection(PASSWORD, port=error_server[1]) as conn:
+def test_connection_closed(error_connection_server):
+    with PhotoshopConnection(
+        PASSWORD, port=error_connection_server[1]
+    ) as conn:
+        with pytest.raises(OSError):
+            response = conn.execute(SCRIPT)
+
+
+def test_connection_illegal(illegal_server):
+    with PhotoshopConnection(PASSWORD, port=illegal_server[1]) as conn:
         with pytest.raises(RuntimeError):
-            response = conn.execute(SCRIPT, timeout=.5)
+            response = conn.execute(SCRIPT)
 
 
 def test_connection_error_image(error_image_server):
     with PhotoshopConnection(PASSWORD, port=error_image_server[1]) as conn:
-        with pytest.raises(RuntimeError):
-            response = conn.execute(SCRIPT, timeout=.5)
+        with pytest.raises(ValueError):
+            response = conn.execute(SCRIPT)
 
 
 def test_runtime_error(error_string_server):
@@ -74,11 +82,41 @@ def test_runtime_error(error_string_server):
             response = conn.execute(SCRIPT)
 
 
+def test_error_status(error_status_server):
+    with PhotoshopConnection(PASSWORD, port=error_status_server[1]) as conn:
+        with pytest.raises(ValueError):
+            response = conn.execute(SCRIPT)
+
+
+def test_error_transaction(error_transaction_server):
+    with PhotoshopConnection(
+        PASSWORD, port=error_transaction_server[1]
+    ) as conn:
+        with pytest.raises(RuntimeError):
+            response = conn.execute(SCRIPT)
+
+
 def test_upload(script_server):
     with PhotoshopConnection(PASSWORD, port=script_server[1]) as conn:
-        conn.upload(b'\x00\x00\x00\x00')
+        conn.upload(b'\x00\x00\x00\x00', suffix='.dat')
+
+
+def test_download(script_output_server):
+    with PhotoshopConnection(PASSWORD, port=script_output_server[1]) as conn:
+        conn.download('/path/to/tempdata.temp')
 
 
 def test_ping(script_server):
     with PhotoshopConnection(PASSWORD, port=script_server[1]) as conn:
         conn.ping()
+
+
+@pytest.mark.parametrize('file_type', [
+    'PHOTOSHOP',
+    None,
+])
+def test_open_document(script_server, file_type):
+    with PhotoshopConnection(
+        PASSWORD, port=script_server[1], validator=parseScript
+    ) as conn:
+        conn.open_document('filename.psd', file_type=file_type)

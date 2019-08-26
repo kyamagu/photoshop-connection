@@ -35,11 +35,10 @@ class Kevlar(object):
             :py:class:`~photoshop.protocol.Pixmap` if `format` is 2.
         :raise RuntimeError: if error happens in remote.
         """
-        response = self._execute(
-            'sendDocumentThumbnailToNetworkClient.js.j2',
-            locals(),
-            receive_output=True
+        script = self._render(
+            'sendDocumentThumbnailToNetworkClient.js.j2', locals()
         )
+        response = self.execute(script, receive_output=True)
         assert response['content_type'] == ContentType.IMAGE
         return response.get('body', {}).get('data')
 
@@ -230,11 +229,10 @@ class Kevlar(object):
             the group (and vice-versa). The range can also just include layers
             inside a group with no group layers at all.
         """
-        response = self._execute(
-            'sendLayerThumbnailToNetworkClient.js.j2',
-            locals(),
-            receive_output=True
+        script = self._render(
+            'sendLayerThumbnailToNetworkClient.js.j2', locals()
         )
+        response = self.execute(script, receive_output=True)
         assert response['content_type'] == ContentType.IMAGE
         return response.get('body', {}).get('data')
 
@@ -306,11 +304,8 @@ class Kevlar(object):
 
         :raise RuntimeError: if error happens in remote.
         """
-        response = self._execute(
-            'sendLayerShapeToNetworkClient.js.j2',
-            locals(),
-            receive_output=True
-        )
+        script = self._render('sendLayerShapeToNetworkClient.js.j2', locals())
+        response = self.execute(script, receive_output=True)
         assert response['content_type'] == ContentType.SCRIPT
         return json.loads(response.get('body', b'{}').decode('utf-8'))
 
@@ -371,11 +366,10 @@ class Kevlar(object):
         :raise RuntimeError: if error happens in remote.
         """
         # TODO: Implement whichInfo option.
-        response = self._execute(
-            'sendDocumentInfoToNetworkClient.js.j2',
-            locals(),
-            receive_output=True
+        script = self._render(
+            'sendDocumentInfoToNetworkClient.js.j2', locals()
         )
+        response = self.execute(script, receive_output=True)
         assert response['content_type'] == ContentType.SCRIPT
         return json.loads(response.get('body', b'{}').decode('utf-8'))
 
@@ -424,10 +418,9 @@ class Kevlar(object):
             To return chunks, or the path format to write it to a temp file.
             Document stream/attributes are returned as a FileStream Reply.
         """
-        response = self._execute(
-            'sendDocumentStreamToNetworkClient.js.j2',
-            locals(),
-            receive_output=True
+        script = self._render(
+            'sendDocumentStreamToNetworkClient.js.j2', locals()
         )
+        response = self.execute(script, receive_output=True)
         assert response['content_type'] == ContentType.FILE_STREAM
         return response.get('body')

@@ -1,8 +1,14 @@
 import contextlib
 import pytest
 import threading
+import logging
+import socket
+from esprima import parseScript
+from esprima.error_handler import Error as ParseError
 from socketserver import BaseRequestHandler, ThreadingTCPServer
 from photoshop.protocol import Protocol, ContentType, Pixmap
+
+logger = logging.getLogger(__name__)
 
 PASSWORD = 'secret'
 KEEP_ALIVE_RESPONSE = b'Yep, still alive'
@@ -26,6 +32,7 @@ FILE_STREAM_RESPONSE = (
     b'\x01p^x|\x06\x80&\xafqm\x07\x17\x9f\xa9qr%\x93\xc2^\x0087Y\x03@\xefV\xd2'
     b'\xf8-\xff[\xbe\x00\xc8\xecJ\x9e\x97kYc\x00\x00\x00\x00IEND\xaeB`\x82'
 )
+ACKNOWLEDGE = b'[ActionDescriptor]'
 
 
 class PhotoshopHandler(BaseRequestHandler):
@@ -33,73 +40,84 @@ class PhotoshopHandler(BaseRequestHandler):
         self.protocol = Protocol(PASSWORD)
 
     def handle(self):
-        raise NotImplementedError
+        try:
+            while True:
+                request = self.protocol.receive(self.request)
+                self.do_handle(request)
+        except OSError:
+            pass
+
+    def do_handle(self, request):
+        body = self.make_response(request)
+        self.send_script(request['transaction'], body)
+
+    def send_script(self, transaction, body=b''):
+        logger.debug('SEND RESPONSE: %r' % body)
+        self.protocol.send(self.request, ContentType.SCRIPT, body, transaction)
+
+    def make_response(self, request, body=None):
+        content_type = request.get('content_type')
+        if content_type == ContentType.SCRIPT:
+            try:
+                script = parseScript(request['body'].decode('utf-8'))
+            except ParseError as e:
+                logger.exception('%s: %r' % (e, request['body']))
+                return b''
+            return body or b'{}'
+        elif content_type == ContentType.KEEP_ALIVE:
+            return KEEP_ALIVE_RESPONSE
+        elif content_type == ContentType.DATA:
+            return DATA_RESPONSE
+        return body or b''
 
 
-class ScriptHandler(PhotoshopHandler):
-    def handle(self):
-        request = self.protocol.receive(self.request)
-        if request.get('content_type') == ContentType.KEEP_ALIVE:
-            self.protocol.send(
-                self.request, ContentType.SCRIPT, KEEP_ALIVE_RESPONSE
-            )
-        elif request.get('content_type') == ContentType.DATA:
-            self.protocol.send(self.request, ContentType.SCRIPT, DATA_RESPONSE)
-        else:
-            self.protocol.send(self.request, ContentType.SCRIPT, b'{}')
-
-
-class ScriptOutputHandler(ScriptHandler):
-    def handle(self):
-        super(ScriptOutputHandler, self).handle()
-        self.protocol.send(
-            self.request, ContentType.SCRIPT, b'[ActionDescriptor]'
-        )
+class ScriptOutputHandler(PhotoshopHandler):
+    def do_handle(self, request):
+        super(ScriptOutputHandler, self).do_handle(request)
+        self.send_script(request['transaction'], ACKNOWLEDGE)
 
 
 class JPEGHandler(PhotoshopHandler):
-    def handle(self):
-        request = self.protocol.receive(self.request)
-        self.protocol.send(
-            self.request, ContentType.SCRIPT, b'[ActionDescriptor]'
-        )
+    def do_handle(self, request):
+        # Can be before the data.
+        self.send_script(request['transaction'], ACKNOWLEDGE)
         self.protocol.send(self.request, ContentType.IMAGE, b'\x01\x00')
 
 
 class PixmapHandler(PhotoshopHandler):
-    def handle(self):
-        request = self.protocol.receive(self.request)
+    def do_handle(self, request):
         data = b'\x02' + Pixmap(2, 2, 8, 3, 3, 8, b'\x00' * 16).dump()
         self.protocol.send(self.request, ContentType.IMAGE, data)
-        self.protocol.send(
-            self.request, ContentType.SCRIPT, b'[ActionDescriptor]'
-        )
+        self.send_script(request['transaction'], ACKNOWLEDGE)
 
 
 class FileStreamHandler(PhotoshopHandler):
-    def handle(self):
-        request = self.protocol.receive(self.request)
+    def do_handle(self, request):
         self.protocol.send(
             self.request, ContentType.FILE_STREAM, FILE_STREAM_RESPONSE
         )
-        self.protocol.send(
-            self.request, ContentType.SCRIPT, b'[ActionDescriptor]'
-        )
+        self.send_script(request['transaction'], ACKNOWLEDGE)
 
 
-class ErrorImageHandler(PhotoshopHandler):
-    def handle(self):
-        request = self.protocol.receive(self.request)
+class IllegalHandler(PhotoshopHandler):
+    def do_handle(self, request):
+        self.protocol.send(self.request, ContentType.ILLEGAL, b'')
+
+
+class ErrorStringHandler(PhotoshopHandler):
+    def do_handle(self, request):
         self.protocol.send(
-            self.request, ContentType.IMAGE, b'\x03\x00',
+            self.request, ContentType.ERROR_STRING, b'ERROR',
             request['transaction']
         )
 
 
-class IllegalHandler(PhotoshopHandler):
-    def handle(self):
-        request = self.protocol.receive(self.request)
-        self.protocol.send(self.request, ContentType.ILLEGAL, b'')
+class ErrorImageHandler(PhotoshopHandler):
+    def do_handle(self, request):
+        self.protocol.send(
+            self.request, ContentType.IMAGE, b'\x03\x00',
+            request['transaction']
+        )
 
 
 class ErrorHandler(BaseRequestHandler):
@@ -108,10 +126,30 @@ class ErrorHandler(BaseRequestHandler):
         self.request.sendall(b'\x00\x00\x00\x04\x00\x00\x00\x01')
 
 
-class ErrorStringHandler(PhotoshopHandler):
+class ErrorStatusHandler(PhotoshopHandler):
+    def do_handle(self, request):
+        self.protocol.send(
+            self.request,
+            ContentType.SCRIPT,
+            b'',
+            request['transaction'],
+            status=1
+        )
+
+
+class ErrorConnectionHandler(BaseRequestHandler):
     def handle(self):
-        self.request.recv(1024)
-        self.protocol.send(self.request, ContentType.ERROR_STRING, b'ERROR')
+        pass
+
+
+class ErrorTransactionHandler(PhotoshopHandler):
+    def do_handle(self, request):
+        self.protocol.send(
+            self.request,
+            ContentType.SCRIPT,
+            b'',
+            request['transaction'] + 1,
+        )
 
 
 @contextlib.contextmanager
@@ -126,7 +164,7 @@ def serve(handler):
 
 @pytest.yield_fixture
 def script_server():
-    with serve(ScriptHandler) as server:
+    with serve(PhotoshopHandler) as server:
         yield server
 
 
@@ -176,3 +214,27 @@ def error_image_server():
 def error_string_server():
     with serve(ErrorStringHandler) as server:
         yield server
+
+
+@pytest.yield_fixture
+def error_status_server():
+    with serve(ErrorStatusHandler) as server:
+        yield server
+
+
+@pytest.yield_fixture
+def error_connection_server():
+    with serve(ErrorConnectionHandler) as server:
+        yield server
+
+
+@pytest.yield_fixture
+def error_transaction_server():
+    with serve(ErrorTransactionHandler) as server:
+        yield server
+
+
+def test_error_server(error_server):
+    with socket.create_connection(error_server) as sock:
+        sock.sendall(b'\x00')
+        assert sock.recv(1024)

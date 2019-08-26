@@ -1,3 +1,6 @@
+"""
+Photoshop session.
+"""
 import contextlib
 import socket
 import threading
@@ -15,12 +18,14 @@ logger = logging.getLogger(__name__)
 class Transaction(object):
     """Transaction class."""
     _id = 0
+    lock = threading.Lock()
 
-    def __init__(self, protocol, socket):
+    def __init__(self, protocol, socket, lock):
         self.id = self._id
         self.queue = queue.Queue()
         self.protocol = protocol
         self.socket = socket
+        self.lock = lock
         self._id += 1
 
     @classmethod
@@ -28,24 +33,19 @@ class Transaction(object):
         cls._id = value
 
     def send(self, content_type, data):
-        self.protocol.send(self.socket, content_type, data, self.id)
+        with self.lock:
+            self.protocol.send(self.socket, content_type, data, self.id)
 
-    def receive(self, timeout=10):
-        try:
-            response = self.queue.get(timeout=timeout)
-        except queue.Empty as e:
-            raise RuntimeError('TIMEOUT: %s' % e)
-        message = None
-        if response['status']:
-            message = 'ERROR %d: %r' % (response['status'], response['body'])
-        if response['content_type'] == ContentType.ILLEGAL:
-            message = 'ILLEGAL: %r' % response['body']
-        if response['content_type'] == ContentType.ERROR_STRING:
-            message = response['body'].decode('utf-8')
-        if message:
-            logger.exception(message)
-            raise RuntimeError(message)
+    def receive(self, **kwargs):
+        response = self.queue.get(**kwargs)
 
+        if isinstance(response, Exception):
+            raise response
+
+        assert response['status'] == 0
+        assert response['content_type'] not in (
+            ContentType.ILLEGAL, ContentType.ERROR_STRING
+        )
         message = '%s' % response
         logger.debug(message if len(message) < 256 else message[:256] + '...')
         return response
@@ -57,19 +57,27 @@ def dispatch(socket, protocol, transactions):
     while True:
         try:
             response = protocol.receive(socket)
-        except OSError as e:
-            logger.debug('Socket closed.')
+            if response['content_type'] == ContentType.ILLEGAL:
+                raise RuntimeError('Illegal response: %s' % response)
+            elif response['content_type'] == ContentType.ERROR_STRING:
+                raise RuntimeError(
+                    'Error: %s' % response['body'].decode('utf-8', 'ignore')
+                )
+
+            transaction_id = response.get('transaction')
+            with Transaction.lock:
+                txn = transactions.get(transaction_id)
+                if not isinstance(txn, Transaction):
+                    raise RuntimeError('Transaction not found: %s' % response)
+                txn.queue.put(response)
+        except Exception as e:
+            # If any exception happens, send that to all transaction threads.
+            with Transaction.lock:
+                if len(transactions) > 0 or not isinstance(e, OSError):
+                    logger.debug('%s: %s' % (threading.current_thread(), e))
+                for txn in transactions.values():
+                    txn.queue.put(e)
             break
-        except (AssertionError, ValueError) as e:
-            logger.exception(e)
-            break
-        transaction_id = response.get('transaction')
-        if transaction_id is None:
-            raise RuntimeError('Invalid response: %s' % response)
-        txn = transactions.get(response.get('transaction'))
-        if not txn:
-            raise RuntimeError('Transaction not found: %s' % response)
-        txn.queue.put(response)
     logger.debug('Dispatch thread terminates.')
 
 
@@ -108,6 +116,7 @@ class PhotoshopConnection(Kevlar):
         self.port = port
         self.socket = None
         self.validator = validator
+        self.lock = threading.Lock()
         self._reset_connection()
 
     def __del__(self):
@@ -138,40 +147,46 @@ class PhotoshopConnection(Kevlar):
             Transaction.reset()
             self.transactions = dict()
             self.socket = socket.create_connection((self.host, self.port))
-            self.dispatcher = threading.Thread(
-                target=dispatch,
-                args=(self.socket, self.protocol, self.transactions),
-                daemon=True
-            )
-            self.dispatcher.start()
+            self._start_dispatcher()
         except ConnectionRefusedError:
             logger.exception(
                 'Is Photoshop running and configured for remote connection?'
             )
             raise
 
+    def _start_dispatcher(self):
+        self.dispatcher = threading.Thread(
+            target=dispatch,
+            args=(self.socket, self.protocol, self.transactions),
+            daemon=True
+        )
+        self.dispatcher.start()
+
     @contextlib.contextmanager
     def _transaction(self):
-        txn = Transaction(self.protocol, self.socket)
-        self.transactions[txn.id] = txn
-        reset = False
+        with Transaction.lock:
+            txn = Transaction(self.protocol, self.socket, self.lock)
+            self.transactions[txn.id] = txn
         try:
             yield txn
-            txn.queue.task_done()
-        except queue.Empty as e:
-            logger.error(e)
-            reset = True
+        except Exception as e:
+            logger.exception(e)
+            raise
         finally:
-            del self.transactions[txn.id]
-            if reset:
-                self._reset_connection()
+            with Transaction.lock:
+                logger.debug('Delete txn %d' % txn.id)
+                txn.queue.task_done()
+                del self.transactions[txn.id]
 
-    def _execute(self, template_file, context, **kwargs):
+    def _render(self, template_file, context):
+        """
+        Render script template.
+        """
+        logger.debug('Rendering %s' % template_file)
         command = self._env.get_template(template_file).render(context)
-        logger.debug('Command:\n%s' % command)
-        return self.execute(command, **kwargs)
+        return command
 
-    def execute(self, script, receive_output=False, timeout=10):
+    def execute(self, script, receive_output=False, timeout=None):
         """
         Execute the given ExtendScript in Photoshop.
 
@@ -272,25 +287,24 @@ class PhotoshopConnection(Kevlar):
         :param smart_object: open as a smart object.
         :return: `dict` of response.
         """
-        if file_type:
-            file_type = 'OpenDocumentType.%s' % file_type.upper()
-        else:
-            file_type = 'undefined'
-        return self._execute('open.js.j2', locals())
+        return self.execute(self._render('open.js.j2', locals()))
 
-    def download(self, path, file_type=None):
+    def download(self, path, file_type=None, **kwargs):
         """
         Download the specified document. The file type must be in the format
         supported by Photoshop.
 
         :param path: file path on the server.
+        :param file_type: file type, see :py:meth:`open_document`.
         :return: `dict`. See return type of
             :py:meth:`~PhotoshopConnection.get_document_stream`
         """
-        self.open_document(path, file_type, True)
-        data = self.get_document_stream()
-        self.execute('activeDocument.close(SaveOptions.DONOTSAVECHANGES)')
-        return data
+        script = '\n'.join((
+            self._render('open.js.j2', locals()),
+            self._render('sendDocumentStreamToNetworkClient.js.j2', locals()),
+            'activeDocument.close(SaveOptions.DONOTSAVECHANGES);'
+        ))
+        return self.execute(script, receive_output=True)
 
     def ping(self, timeout=10):
         """

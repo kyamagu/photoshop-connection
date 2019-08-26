@@ -82,24 +82,25 @@ class Protocol(object):
     Photoshop protocol.
     """
     VERSION = 1
-    NO_ERROR = 0
 
     def __init__(self, password):
         self.enc = EncryptDecrypt(password.encode('ascii'))
 
-    def send(self, socket, content_type, data, transaction=0):
+    def send(self, socket, content_type, data, transaction=0, status=0):
         """
         Sends data to Photoshop.
 
         :param content_type: See :py:class:`.ContentType`.
         :param data: `bytes` to send.
         :param transaction: transaction id.
+        :param status: execution status, should be 0.
         """
         body = pack('>3I', self.VERSION, transaction, content_type) + data
         encrypted = self.enc.encrypt(body)
-        header = pack('>2I', 4 + len(encrypted), self.NO_ERROR)
-        logger.debug('Sending %d bytes' % (len(header) + len(encrypted)))
-        socket.sendall(header + encrypted)
+        length = 4 + len(encrypted)
+        data = pack('>2I', length, status) + encrypted
+        logger.debug('Sending %d bytes (total %d bytes)' % (length, len(data)))
+        socket.sendall(data)
 
     def receive(self, socket):
         """
@@ -117,52 +118,45 @@ class Protocol(object):
 
         :raise AssertionError: if response format is invalid.
         """
-        header = socket.recv(8)
-        if len(header) == 0:
-            raise OSError('Empty response, likely connection closed.')
-        assert len(header) == 8, (
-            'Invalid response, likely incorrect password: %r' % header
-        )
-        length, status = unpack('>2I', header)
-        logger.debug('%d bytes returned, status = %d' % (length, status))
-        length = max(0, length - 4)
+        length = socket.recv(4)
+        if len(length) != 4:
+            raise ConnectionError('Empty response, likely connection closed.')
+        length = unpack('>I', length)[0]
+        assert length >= 4, 'length = %d' % length
         body = socket.recv(length)
-        assert len(
-            body
-        ) == length, 'Received %d bytes, expected %d' % (len(body), length)
+        assert len(body) == length, (
+            'Expected %d bytes, received %d bytes, password incorrect?' %
+            (length, len(body))
+        )
+        status = unpack('>I', body[:4])[0]
+        logger.debug('%d bytes returned, status = %d' % (length, status))
+        body = body[4:]
 
-        if status > 0:
-            logger.error(
+        if status:
+            raise ValueError(
                 'status = %d: likely incorrect password: %r' % (
                     status, body[:min(12, len(body))] +
                     (b'' if len(body) <= 12 else b'...')
                 )
             )
-            return dict(
-                status=status,
-                protocol=None,
-                transaction=None,
-                content_type=ContentType.ILLEGAL,
-                body=body
-            )
-        else:
-            data = self.enc.decrypt(body)
-            assert len(data) >= 12
-            protocol, transaction, content_type = unpack('>3I', data[:12])
-            assert protocol == self.VERSION
-            body = data[12:]
-            if content_type == ContentType.IMAGE:
-                body = self._parse_image(body)
-            elif content_type == ContentType.FILE_STREAM:
-                body = self._parse_file_stream(body)
 
-            return dict(
-                status=status,
-                protocol=protocol,
-                transaction=transaction,
-                content_type=ContentType(content_type),
-                body=body
-            )
+        data = self.enc.decrypt(body)
+        assert len(data) >= 12
+        protocol, transaction, content_type = unpack('>3I', data[:12])
+        assert protocol == self.VERSION
+        body = data[12:]
+        if content_type == ContentType.IMAGE:
+            body = self._parse_image(body)
+        elif content_type == ContentType.FILE_STREAM:
+            body = self._parse_file_stream(body)
+
+        return dict(
+            status=status,
+            protocol=protocol,
+            transaction=transaction,
+            content_type=ContentType(content_type),
+            body=body
+        )
 
     def _parse_image(self, data):
         assert len(data) > 0
