@@ -29,7 +29,7 @@ Open a file, get the thumbnail image, then close the file:
     from photoshop import PhotoshopConnection
 
     with PhotoshopConnection(password='secret') as conn:
-        conn.execute('open("/server/path/to/example.psd")')
+        conn.execute('open(File("/server/path/to/example.psd"))')
         jpeg_binary = conn.get_document_thumbnail()
         conn.execute('activeDocument.close()')
 
