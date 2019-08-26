@@ -26,7 +26,7 @@ class Transaction(object):
         self.protocol = protocol
         self.socket = socket
         self.lock = lock
-        self._id += 1
+        self.__class__._id += 1
 
     @classmethod
     def reset(cls, value=0):
@@ -182,8 +182,8 @@ class PhotoshopConnection(Kevlar):
         """
         Render script template.
         """
-        logger.debug('Rendering %s' % template_file)
         command = self._env.get_template(template_file).render(context)
+        # logger.debug('Command:\n%s' % command)
         return command
 
     def execute(self, script, receive_output=False, timeout=None):
@@ -299,12 +299,15 @@ class PhotoshopConnection(Kevlar):
         :return: `dict`. See return type of
             :py:meth:`~PhotoshopConnection.get_document_stream`
         """
+        smart_object = True
         script = '\n'.join((
             self._render('open.js.j2', locals()),
             self._render('sendDocumentStreamToNetworkClient.js.j2', locals()),
-            'activeDocument.close(SaveOptions.DONOTSAVECHANGES);'
         ))
-        return self.execute(script, receive_output=True)
+        logger.debug(script)
+        response = self.execute(script, receive_output=True)
+        self.execute('activeDocument.close(SaveOptions.DONOTSAVECHANGES);')
+        return response.get('body')
 
     def ping(self, timeout=10):
         """

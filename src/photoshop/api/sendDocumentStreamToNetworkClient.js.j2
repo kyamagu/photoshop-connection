@@ -23,7 +23,7 @@ desc1.putLargeInteger(stringIDToTypeID("position"), pos);
 {% if size is number %}
 desc1. putLargeInteger(stringIDToTypeID("size"), size);
 {% endif %}
-{% if path %}
+{% if path_only %}
 desc1.putBoolean(stringIDToTypeID("path"), true);
 {% endif %}
 executeAction(idNS, desc1, DialogModes.NO);

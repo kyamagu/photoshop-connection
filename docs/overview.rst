@@ -41,7 +41,7 @@ Upload a local PSD file to the server, edit, then download:
         with open('input.psd', 'rb') as f:
             tmpfile = conn.upload(f.read(), suffix='.psd')
         conn.execute('''
-        open("%s");
+        open(File("%s"));
         activeDocument.activeLayer.name = "edited";
         activeDocument.save();
         activeDocument.close();

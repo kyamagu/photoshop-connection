@@ -381,7 +381,7 @@ class Kevlar(object):
         layer=None,
         position=None,
         size=None,
-        path=None
+        path_only=None
     ):
         """
         Get the file info and file stream for a smart object.
@@ -398,9 +398,9 @@ class Kevlar(object):
             the selected layers
         :param position: offset into file (defaults to 0).
         :param size: number of bytes to return (defaults to all bytes).
-        :param path: instead of returning the file stream back over the wire,
-            write it to a file local to the server, and return the path as a
-            string argument in the JSON part of the FileStream Reply.
+        :param path_only: instead of returning the file stream back over the
+            wire, write it to a file local to the server, and return the path as
+            a string argument in the JSON part of the FileStream Reply.
         :return: `dict` with the following fields:
 
             - `mimeFormat`: mime string.

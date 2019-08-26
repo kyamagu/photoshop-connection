@@ -1,1 +1,1 @@
-open(File("{{path}}"), {{'OpenDocumentType.%s' % file_type if file_type else 'undefined'}}, {{true if smart_object else false}});
+open(File("{{path}}"), {{'OpenDocumentType.%s' % file_type if file_type else 'undefined'}}, {{true|lower if smart_object else false|lower}});
