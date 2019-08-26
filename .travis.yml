@@ -19,4 +19,4 @@ matrix:
 install:
   - pip install -U pip tox-travis
 script:
-  - tox -- --log-cli-level debug
+  - tox
