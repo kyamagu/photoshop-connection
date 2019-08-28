@@ -20,8 +20,6 @@ matrix:
 install:
 - pip install -U pip wheel tox-travis
 script:
-- python setup.py sdist
-- pip wheel --no-index --no-deps --wheel-dir dist dist/*.tar.gz
 - tox
 deploy:
   provider: pypi
@@ -32,3 +30,4 @@ deploy:
     tags: true
     env: $DEPLOY = true
   skip_existing: true
+  distributions: 'sdist bdist_wheel'
