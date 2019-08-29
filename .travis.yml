@@ -24,6 +24,8 @@ install:
 - pip install -U pip tox-travis codecov
 script:
 - tox
+after_success:
+- codecov
 deploy:
   provider: pypi
   user: kyamagu
