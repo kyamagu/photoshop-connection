@@ -10,7 +10,7 @@ import os
 from jinja2 import Environment, PackageLoader
 
 from photoshop.protocol import Protocol, ContentType
-from photoshop.api import Kevlar
+from photoshop.api import Kevlar, Event
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +99,13 @@ class PhotoshopConnection(Kevlar):
                 c.execute('bad_script +')  # Raises an Error
 
     :raise ConnectionRefusedError: if failed to connect to Photoshop.
+
+    Example::
+
+        from photoshop import PhotoshopConnection
+
+        with PhotoshopConnection(password='secret', host='192.168.0.1') as conn:
+            conn.execute('alert("hi");')
     """
     _env = Environment(
         loader=PackageLoader('photoshop', 'api'), trim_blocks=True
@@ -117,6 +124,7 @@ class PhotoshopConnection(Kevlar):
         self.socket = None
         self.validator = validator
         self.lock = threading.Lock()
+        self.subscribers = []
         self._reset_connection()
 
     def __del__(self):
@@ -143,6 +151,9 @@ class PhotoshopConnection(Kevlar):
         if self.dispatcher:
             self.dispatcher.join()
             self.dispatcher = None
+        for thread in self.subscribers:
+            thread.join()
+        self.subscribers = []
 
     def _reset_connection(self):
         logger.debug('Opening the connection.')

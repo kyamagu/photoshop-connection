@@ -3,6 +3,7 @@ import pytest
 import threading
 import logging
 import socket
+import time
 from esprima import parseScript
 from esprima.error_handler import Error as ParseError
 from socketserver import BaseRequestHandler, ThreadingTCPServer
@@ -75,6 +76,17 @@ class ScriptOutputHandler(PhotoshopHandler):
     def do_handle(self, request):
         super(ScriptOutputHandler, self).do_handle(request)
         self.send_script(request['transaction'], ACKNOWLEDGE)
+
+
+class SubscribeHandler(PhotoshopHandler):
+    def do_handle(self, request):
+        self.send_script(request['transaction'], ACKNOWLEDGE)
+        script = parseScript(request['body'].decode('utf-8'))
+        command = script.body[0].declarations[0].init.arguments[0].value
+        if command == 'networkEventSubscribe':
+            for _ in range(3):
+                time.sleep(1.0)
+                self.send_script(request['transaction'], b'imageChanged\r{}')
 
 
 class JPEGHandler(PhotoshopHandler):
@@ -171,6 +183,12 @@ def script_server():
 @pytest.yield_fixture
 def script_output_server():
     with serve(ScriptOutputHandler) as server:
+        yield server
+
+
+@pytest.yield_fixture
+def subscribe_server():
+    with serve(SubscribeHandler) as server:
         yield server
 
 
