@@ -38,6 +38,7 @@ class Transaction(object):
 
     def receive(self, **kwargs):
         response = self.queue.get(**kwargs)
+        self.queue.task_done()
 
         if isinstance(response, Exception):
             raise response
@@ -53,7 +54,8 @@ class Transaction(object):
 
 def dispatch(socket, protocol, transactions):
     """Receive response and dispatch transactions."""
-    logger.debug('Dispatch thread starts.')
+    thread = threading.current_thread()
+    logger.debug('%s: Dispatch thread starts.' % thread.name)
     while True:
         try:
             response = protocol.receive(socket)
@@ -73,12 +75,11 @@ def dispatch(socket, protocol, transactions):
         except Exception as e:
             # If any exception happens, send that to all transaction threads.
             with Transaction.lock:
-                if len(transactions) > 0 or not isinstance(e, OSError):
-                    logger.debug('%s: %s' % (threading.current_thread(), e))
+                logger.debug('%s: %s' % (thread.name, e))
                 for txn in transactions.values():
                     txn.queue.put(e)
             break
-    logger.debug('Dispatch thread terminates.')
+    logger.debug('%s: Dispatch thread terminates.' % thread.name)
 
 
 class PhotoshopConnection(Kevlar):
@@ -190,7 +191,6 @@ class PhotoshopConnection(Kevlar):
         finally:
             with Transaction.lock:
                 logger.debug('Delete txn %d' % txn.id)
-                txn.queue.task_done()
                 del self.transactions[txn.id]
 
     def _render(self, template_file, context):
