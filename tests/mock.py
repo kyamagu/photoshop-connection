@@ -151,7 +151,7 @@ class ErrorStatusHandler(PhotoshopHandler):
 
 class ErrorConnectionHandler(BaseRequestHandler):
     def handle(self):
-        pass
+        self.request.recv(1024)
 
 
 class ErrorTransactionHandler(PhotoshopHandler):
