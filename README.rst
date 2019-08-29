@@ -36,3 +36,7 @@ Example:
     with PhotoshopConnection(password='secret') as conn:
         conn.execute('alert("hello")')
         jpeg_binary = conn.get_document_thumbnail()
+
+Check out documentation_ for details.
+
+.. _documentation: https://photoshop-connection.readthedocs.io/en/latest/
