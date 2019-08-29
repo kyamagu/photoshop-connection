@@ -1,5 +1,6 @@
-global:
-  env: CODECOV_TOKEN=6b783432-b267-412e-809c-fd44b5c4b52d
+env:
+  global:
+  - CODECOV_TOKEN="6b783432-b267-412e-809c-fd44b5c4b52d"
 language: python
 matrix:
   include:
