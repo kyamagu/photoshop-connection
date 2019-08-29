@@ -1,0 +1,4 @@
+var idNS = stringIDToTypeID("networkEventSubscribe");
+var desc1 = new ActionDescriptor();
+desc1.putClass(stringIDToTypeID("eventIDAttr"),stringIDToTypeID("{{event.value}}"));
+executeAction(idNS, desc1, DialogModes.NO);

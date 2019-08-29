@@ -4,14 +4,110 @@ Kevlar API wrappers.
 https://github.com/adobe-photoshop/generator-core/wiki/Photoshop-Kevlar-API-Additions-for-Generator
 """
 import json
+import threading
+from enum import Enum
 from photoshop.protocol import ContentType
 import logging
 
 logger = logging.getLogger(__name__)
 
 
+class Event(str, Enum):
+    """
+    List of events in :py:meth:`~photoshop.PhotoshopConnection.subscribe`.
+
+    See `Kevlar API`_.
+
+    .. _Kevlar API: https://github.com/adobe-photoshop/generator-core/wiki/Photoshop-Kevlar-API-Additions-for-Generator).
+    """
+    imageChanged = 'imageChanged'
+    generatorMenuChanged = 'generatorMenuChanged'
+    generatorDocActivated = 'generatorDocActivated'
+    foregroundColorChanged = 'foregroundColorChanged'
+    backgroundColorChanged = 'backgroundColorChanged'
+    currentDocumentChanged = 'currentDocumentChanged'
+    activeViewChanged = 'activeViewChanged'
+    newDocumentViewCreated = 'newDocumentViewCreated'
+    closedDocument = 'closedDocument'
+    documentChanged = 'documentChanged'
+    colorSettingsChanged = 'colorSettingsChanged'
+    keyboardShortcutsChanged = 'keyboardShortcutsChanged'
+    quickMaskStateChanged = 'quickMaskStateChanged'
+    toolChanged = 'toolChanged'
+    workspaceChanged = 'workspaceChanged'
+    Asrt = 'Asrt'
+    idle = 'idle'
+
+
+def listen_event(self, event, callback):
+    event = Event(event)
+    begin = self._render('networkEventSubscribe.js.j2', dict(event=event))
+    with self._transaction() as txn:
+        txn.send(ContentType.SCRIPT, begin.encode('utf-8'))
+        try:
+            while True:
+                response = txn.receive()
+                data = response.get('body')
+                if data == b'[ActionDescriptor]':
+                    continue
+                data = data.split(b'\r', 1)
+                assert data[0].decode('utf-8') == event
+                result = callback(self, data[1] if len(data) else None)
+                if result:
+                    break
+        except Exception as e:
+            if not isinstance(e, OSError):
+                logger.error('%s' % e)
+            return
+
+    end = self._render('networkEventUnsubscribe.js.j2', dict(event=event))
+    with self._transaction() as txn:
+        txn.send(ContentType.SCRIPT, end.encode('utf-8'))
+        assert txn.receive().get('body') == b'[ActionDescriptor]'
+
+
 class Kevlar(object):
     """Kevlar API wrappers."""
+
+    def subscribe(self, event, callback, block=False, **kwargs):
+        """
+        Subscribe to changes, sends any relevant change info back on subscribing
+        socket.
+
+        :param event: Event name, one of :py:class:`~photoshop.Event`.
+        :param callback: Callable that takes two arguments:
+
+            - `conn`: :py:class:`~photoshop.PhotoshopConnection` instance.
+            - `data`: `bytes` data returned from Photoshop on this event. The
+              actual data format varies by event type.
+
+              Return value of `callback` signals termination of the current
+              subscription. If `callback` returns True, subscription stops.
+
+        :param block: Block until subscription finishes. default `False`.
+
+        Example::
+
+            import json
+            import time
+
+            def handler(conn, data):
+                print(json.loads(data.decode('utf-8')))
+                return True  # This terminates subscription
+
+            with PhotoshopConnection() as conn:
+                conn.subscribe('imageChanged', handler)
+                conn.execute('documents.add()')
+                time.sleep(5)
+        """
+        assert callable(callback)
+        thread = threading.Thread(
+            target=listen_event, args=(self, event, callback), daemon=True
+        )
+        self.subscribers.append(thread)
+        thread.start()
+        if block:
+            thread.join()
 
     def get_document_thumbnail(
         self,

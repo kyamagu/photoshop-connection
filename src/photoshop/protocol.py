@@ -107,7 +107,7 @@ class Protocol(object):
         Receives data from Photoshop.
 
         :param socket: socket to receive data.
-        :return: `dict` of the following fields:
+        :return: `dict` of the following fields.
 
          - `status`: execution status, 0 when success, otherwise error.
          - `protocol`: protocol version, equal to 1.
@@ -116,7 +116,18 @@ class Protocol(object):
          - `body`: body of the response data, `dict` for IMAGE type, otherwise
            bytes.
 
+        Example::
+
+            {
+                'status': 0,
+                'protocol': 1,
+                'transaction': 0,
+                'content_type': ContentType.SCRIPT,
+                'body': b'[ActionDescriptor]'
+            }
+
         :raise AssertionError: if response format is invalid.
+
         """
         length = socket.recv(4)
         if len(length) != 4:
