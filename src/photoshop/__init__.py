@@ -184,6 +184,7 @@ class PhotoshopConnection(Kevlar):
             txn = Transaction(self.protocol, self.socket, self.lock)
             self.transactions[txn.id] = txn
         try:
+            assert self.dispatcher.is_alive()
             yield txn
         except Exception as e:
             logger.exception(e)
