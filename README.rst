@@ -13,7 +13,7 @@ Python package to remotely execute ExtendScript_ in Adobe Photoshop.
     :alt: Documentation Status
 .. image:: https://codecov.io/gh/kyamagu/photoshop-connection/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/kyamagu/photoshop-connection
-.. image:: https://img.shields.io/pypi/v/photoshop-connection
+.. image:: https://img.shields.io/pypi/v/photoshop-connection?color=success
     :target: https://pypi.org/project/photoshop-connection/
     :alt: PyPI
 
