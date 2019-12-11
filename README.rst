@@ -28,6 +28,12 @@ given field, and click `OK` button and restart Photoshop.
 
 Photoshop must be launched and running for the package to work.
 
+Install
+-------
+
+```bash
+pip install photoshop-connection
+```
 
 Usage
 -----
