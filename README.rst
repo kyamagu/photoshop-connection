@@ -31,9 +31,9 @@ Photoshop must be launched and running for the package to work.
 Install
 -------
 
-```bash
-pip install photoshop-connection
-```
+.. code-block:: bash
+    
+    pip install photoshop-connection
 
 Usage
 -----
