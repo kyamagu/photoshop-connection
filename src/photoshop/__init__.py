@@ -218,7 +218,7 @@ class PhotoshopConnection(Kevlar):
             self.validator(script)
 
         with self._transaction() as txn:
-            txn.send(ContentType.SCRIPT, script.encode('utf-8'))
+            txn.send(ContentType.SCRIPT_SHARED, script.encode('utf-8'))
             response = txn.receive(timeout=timeout)
 
             if receive_output:

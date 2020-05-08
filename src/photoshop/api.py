@@ -43,7 +43,7 @@ def listen_event(self, event, callback):
     event = Event(event)
     begin = self._render('networkEventSubscribe.js.j2', dict(event=event))
     with self._transaction() as txn:
-        txn.send(ContentType.SCRIPT, begin.encode('utf-8'))
+        txn.send(ContentType.SCRIPT_SHARED, begin.encode('utf-8'))
         try:
             while True:
                 response = txn.receive()
@@ -62,13 +62,12 @@ def listen_event(self, event, callback):
 
     end = self._render('networkEventUnsubscribe.js.j2', dict(event=event))
     with self._transaction() as txn:
-        txn.send(ContentType.SCRIPT, end.encode('utf-8'))
+        txn.send(ContentType.SCRIPT_SHARED, end.encode('utf-8'))
         assert txn.receive().get('body') == b'[ActionDescriptor]'
 
 
 class Kevlar(object):
     """Kevlar API wrappers."""
-
     def subscribe(self, event, callback, block=False, **kwargs):
         """
         Subscribe to changes, sends any relevant change info back on subscribing

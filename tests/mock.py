@@ -58,7 +58,7 @@ class PhotoshopHandler(BaseRequestHandler):
 
     def make_response(self, request, body=None):
         content_type = request.get('content_type')
-        if content_type == ContentType.SCRIPT:
+        if content_type in (ContentType.SCRIPT, ContentType.SCRIPT_SHARED):
             try:
                 script = parseScript(request['body'].decode('utf-8'))
             except ParseError as e:
