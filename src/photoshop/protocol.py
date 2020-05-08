@@ -22,6 +22,7 @@ class ContentType(enum.IntEnum):
     FILE_STREAM = 7
     CANCEL_COMMAND = 8
     EVENT_STATUS = 9
+    SCRIPT_SHARED = 10
 
 
 class Pixmap(object):
@@ -36,7 +37,6 @@ class Pixmap(object):
     :ivar bits: bits per pixel.
     :ivar data: raw data bytes.
     """
-
     def __init__(
         self, width, height, row_bytes, color_mode, channels, bits, data
     ):
