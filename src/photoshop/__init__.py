@@ -109,7 +109,9 @@ class PhotoshopConnection(Kevlar):
             conn.execute('alert("hi");')
     """
     _env = Environment(
-        loader=PackageLoader('photoshop', 'api'), trim_blocks=True
+        # loader=PackageLoader('photoshop', 'api'), trim_blocks=True
+        # PackageLoader seems not to be working fine when the module is compiled with pyinstaller. I suggest to use Filsystemloader instead. For me it works fine. Please check.
+        loader = FileSystemLoader(os.path.abspath(os.path.dirname(__file__)) + '/api'), trim_blocks=True 
     )
 
     def __init__(
