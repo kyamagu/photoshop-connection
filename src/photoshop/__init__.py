@@ -109,7 +109,10 @@ class PhotoshopConnection(Kevlar):
             conn.execute('alert("hi");')
     """
     _env = Environment(
-        loader=FileSystemLoader(os.path.abspath(os.path.dirname(__file__)) + '/api'), trim_blocks=True
+        loader=FileSystemLoader(
+            os.path.join(os.path.abspath(os.path.dirname(__file__)), 'api'),
+            trim_blocks=True,
+        )
     )
 
     def __init__(
