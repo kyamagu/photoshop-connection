@@ -15,7 +15,6 @@
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
-import os
 
 # -- Project information -----------------------------------------------------
 
@@ -24,17 +23,10 @@ copyright = "2019, Kota Yamaguchi"
 author = "Kota Yamaguchi"
 
 
-def get_version():
-    root = os.path.dirname(os.path.dirname(__file__))
-    filename = os.path.join(root, "src", "photoshop", "version.py")
-    with open(filename, "r") as f:
-        return f.read().split("=")[1].strip(" \n'")
-
-
 # The short X.Y version
-version = get_version()
+version = "0.2.0"
 # The full version, including alpha/beta/rc tags
-release = get_version()
+release = version
 
 # -- General configuration ---------------------------------------------------
 
