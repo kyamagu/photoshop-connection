@@ -1,75 +1,83 @@
-import pytest
-import logging
+from typing import Optional, Tuple
+
 from esprima import parseScript
 from photoshop import PhotoshopConnection
 from photoshop.protocol import Pixmap
-from .mock import (
-    script_output_server, subscribe_server, error_status_server, jpeg_server,
-    pixmap_server, filestream_server, PASSWORD
-)
 
 
 class CallbackHandler(object):
-    def __init__(self):
+    def __init__(self) -> None:
         self.count = 0
 
-    def __call__(self, conn, data):
-        assert data == b'{}'
+    def __call__(self, conn: PhotoshopConnection, data: Optional[bytes]) -> bool:
+        assert data == b"{}"
         self.count += 1
         if self.count >= 3:
             return True
         return False
 
 
-def test_subscribe(subscribe_server):
+def test_subscribe(password: str, subscribe_server: Tuple[Optional[str], int]) -> None:
     with PhotoshopConnection(
-        PASSWORD, port=subscribe_server[1], validator=parseScript
+        password, port=subscribe_server[1], validator=parseScript
     ) as conn:
-        conn.subscribe('imageChanged', CallbackHandler(), block=True)
+        conn.subscribe("imageChanged", CallbackHandler(), block=True)
 
 
-def test_subscribe_error(error_status_server):
+def test_subscribe_error(
+    password: str, error_status_server: Tuple[Optional[str], int]
+) -> None:
     with PhotoshopConnection(
-        PASSWORD, port=error_status_server[1], validator=parseScript
+        password, port=error_status_server[1], validator=parseScript
     ) as conn:
-        conn.subscribe('imageChanged', CallbackHandler(), block=True)
+        conn.subscribe("imageChanged", CallbackHandler(), block=True)
 
 
-def test_get_document_thumbnail(jpeg_server):
+def test_get_document_thumbnail(
+    password: str, jpeg_server: Tuple[Optional[str], int]
+) -> None:
     with PhotoshopConnection(
-        PASSWORD, port=jpeg_server[1], validator=parseScript
+        password, port=jpeg_server[1], validator=parseScript
     ) as conn:
         jpeg_binary = conn.get_document_thumbnail()
         assert isinstance(jpeg_binary, bytes)
 
 
-def test_get_layer_thumbnail(pixmap_server):
+def test_get_layer_thumbnail(
+    password: str, pixmap_server: Tuple[Optional[str], int]
+) -> None:
     with PhotoshopConnection(
-        PASSWORD, port=pixmap_server[1], validator=parseScript
+        password, port=pixmap_server[1], validator=parseScript
     ) as conn:
         pixmap = conn.get_layer_thumbnail()
         assert isinstance(pixmap, Pixmap)
 
 
-def test_get_layer_shape(script_output_server):
+def test_get_layer_shape(
+    password: str, script_output_server: Tuple[Optional[str], int]
+) -> None:
     with PhotoshopConnection(
-        PASSWORD, port=script_output_server[1], validator=parseScript
+        password, port=script_output_server[1], validator=parseScript
     ) as conn:
         shape_info = conn.get_layer_shape()
         assert isinstance(shape_info, dict)
 
 
-def test_get_document_info(script_output_server):
+def test_get_document_info(
+    password: str, script_output_server: Tuple[Optional[str], int]
+) -> None:
     with PhotoshopConnection(
-        PASSWORD, port=script_output_server[1], validator=parseScript
+        password, port=script_output_server[1], validator=parseScript
     ) as conn:
         document_info = conn.get_document_info()
         assert isinstance(document_info, dict)
 
 
-def test_get_document_stream(filestream_server):
+def test_get_document_stream(
+    password: str, filestream_server: Tuple[Optional[str], int]
+) -> None:
     with PhotoshopConnection(
-        PASSWORD, port=filestream_server[1], validator=parseScript
+        password, port=filestream_server[1], validator=parseScript
     ) as conn:
         document_info = conn.get_document_stream()
         assert isinstance(document_info, dict)

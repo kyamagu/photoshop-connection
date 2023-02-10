@@ -1,0 +1,55 @@
+[tool.poetry]
+name = "photoshop-connection"
+version = "0.2.0"
+description = "Python package for Photoshop Connection"
+authors = ["Kota Yamaguchi <KotaYamaguchi1984@gmail.com>"]
+license = "MIT"
+readme = "README.rst"
+repository = "https://github.com/kyamagu/photoshop-connection"
+documentation = "https://photoshop-connection.readthedocs.io"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Topic :: Software Development :: Libraries",
+  "Topic :: Multimedia :: Graphics",
+]
+packages = [{ include = "photoshop", from = "src" }]
+include = ["src/**/*.js.j2"]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+cryptography = "^39.0.1"
+jinja2 = "^3.1.2"
+
+[tool.poetry.group.dev.dependencies]
+esprima = "^4.0.1"
+pillow = "^9.4.0"
+pytest = "^7.2.1"
+pysen = {extras = ["lint"], version = "^0.10.3"}
+flake8 = "<5"
+pytest-cov = "^4.0.0"
+pytest-timeout = "^2.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pysen]
+version = "0.10"
+
+[tool.pysen.lint]
+enable_black = true
+enable_flake8 = true
+enable_isort = true
+enable_mypy = true
+mypy_preset = "strict"
+line_length = 88
+py_version = "py37"
+[[tool.pysen.lint.mypy_targets]]
+  paths = ["src", "tests"]
+
+[tool.pytest.ini_options]
+addopts = "--cov-report term-missing --cov=photoshop"
+testpaths = ["tests"]

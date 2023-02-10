@@ -3,11 +3,14 @@ Kevlar API wrappers.
 
 https://github.com/adobe-photoshop/generator-core/wiki/Photoshop-Kevlar-API-Additions-for-Generator
 """
+from __future__ import annotations
+
 import json
-import threading
-from enum import Enum
-from photoshop.protocol import ContentType
 import logging
+from enum import Enum
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
+
+from photoshop.protocol import ContentType, Pixmap
 
 logger = logging.getLogger(__name__)
 
@@ -18,104 +21,64 @@ class Event(str, Enum):
 
     See `Kevlar API`_.
 
-    .. _Kevlar API: https://github.com/adobe-photoshop/generator-core/wiki/Photoshop-Kevlar-API-Additions-for-Generator).
-    """
-    imageChanged = 'imageChanged'
-    generatorMenuChanged = 'generatorMenuChanged'
-    generatorDocActivated = 'generatorDocActivated'
-    foregroundColorChanged = 'foregroundColorChanged'
-    backgroundColorChanged = 'backgroundColorChanged'
-    currentDocumentChanged = 'currentDocumentChanged'
-    activeViewChanged = 'activeViewChanged'
-    newDocumentViewCreated = 'newDocumentViewCreated'
-    closedDocument = 'closedDocument'
-    documentChanged = 'documentChanged'
-    colorSettingsChanged = 'colorSettingsChanged'
-    keyboardShortcutsChanged = 'keyboardShortcutsChanged'
-    quickMaskStateChanged = 'quickMaskStateChanged'
-    toolChanged = 'toolChanged'
-    workspaceChanged = 'workspaceChanged'
-    Asrt = 'Asrt'
-    idle = 'idle'
+    .. _Kevlar API: https://github.com/adobe-photoshop/generator-core/wiki/Photoshop-Kevlar-API-Additions-for-Generator.
+    """  # noqa
 
-
-def listen_event(self, event, callback):
-    event = Event(event)
-    begin = self._render('networkEventSubscribe.js.j2', dict(event=event))
-    with self._transaction() as txn:
-        txn.send(ContentType.SCRIPT_SHARED, begin.encode('utf-8'))
-        try:
-            while True:
-                response = txn.receive()
-                data = response.get('body')
-                if data == b'[ActionDescriptor]':
-                    continue
-                data = data.split(b'\r', 1)
-                assert data[0].decode('utf-8') == event
-                result = callback(self, data[1] if len(data) else None)
-                if result:
-                    break
-        except Exception as e:
-            if not isinstance(e, OSError):
-                logger.error('%s' % e)
-            return
-
-    end = self._render('networkEventUnsubscribe.js.j2', dict(event=event))
-    with self._transaction() as txn:
-        txn.send(ContentType.SCRIPT_SHARED, end.encode('utf-8'))
-        assert txn.receive().get('body') == b'[ActionDescriptor]'
+    imageChanged = "imageChanged"
+    generatorMenuChanged = "generatorMenuChanged"
+    generatorDocActivated = "generatorDocActivated"
+    foregroundColorChanged = "foregroundColorChanged"
+    backgroundColorChanged = "backgroundColorChanged"
+    currentDocumentChanged = "currentDocumentChanged"
+    activeViewChanged = "activeViewChanged"
+    newDocumentViewCreated = "newDocumentViewCreated"
+    closedDocument = "closedDocument"
+    documentChanged = "documentChanged"
+    colorSettingsChanged = "colorSettingsChanged"
+    keyboardShortcutsChanged = "keyboardShortcutsChanged"
+    quickMaskStateChanged = "quickMaskStateChanged"
+    toolChanged = "toolChanged"
+    workspaceChanged = "workspaceChanged"
+    Asrt = "Asrt"
+    idle = "idle"
 
 
 class Kevlar(object):
     """Kevlar API wrappers."""
-    def subscribe(self, event, callback, block=False, **kwargs):
+
+    def _render(self, template_file: str, context: Dict[str, Any]) -> str:
         """
-        Subscribe to changes, sends any relevant change info back on subscribing
-        socket.
-
-        :param event: Event name, one of :py:class:`~photoshop.Event`.
-        :param callback: Callable that takes two arguments:
-
-            - `conn`: :py:class:`~photoshop.PhotoshopConnection` instance.
-            - `data`: `bytes` data returned from Photoshop on this event. The
-              actual data format varies by event type.
-
-              Return value of `callback` signals termination of the current
-              subscription. If `callback` returns True, subscription stops.
-
-        :param block: Block until subscription finishes. default `False`.
-
-        Example::
-
-            import json
-            import time
-
-            def handler(conn, data):
-                print(json.loads(data.decode('utf-8')))
-                return True  # This terminates subscription
-
-            with PhotoshopConnection() as conn:
-                conn.subscribe('imageChanged', handler)
-                conn.execute('documents.add()')
-                time.sleep(5)
+        Render script template.
         """
-        assert callable(callback)
-        thread = threading.Thread(
-            target=listen_event, args=(self, event, callback), daemon=True
-        )
-        self.subscribers.append(thread)
-        thread.start()
-        if block:
-            thread.join()
+        raise NotImplementedError()
+
+    def execute(
+        self,
+        script: str,
+        receive_output: bool = False,
+        timeout: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """
+        Execute the given ExtendScript in Photoshop.
+
+        :param script: ExtendScript to execute in Photoshop.
+        :param receive_output: Indicates extra return value is returned from
+            Photoshop.
+        :param timeout: Timeout in seconds to wait for response.
+        :return: `dict`. See :py:meth:`~photoshop.protocol.Protocol.receive`.
+
+        :raise RuntimeError: if error happens in remote.
+        """
+        raise NotImplementedError()
 
     def get_document_thumbnail(
         self,
-        document=None,
-        max_width=2048,
-        max_height=2048,
-        format=1,
-        placed_ids=None
-    ):
+        document: Optional[str] = None,
+        max_width: int = 2048,
+        max_height: int = 2048,
+        format: int = 1,
+        placed_ids: Optional[Sequence[str]] = None,
+    ) -> Union[bytes, Pixmap]:
         """
         Send a thumbnail of a document's composite.
 
@@ -130,35 +93,33 @@ class Kevlar(object):
             :py:class:`~photoshop.protocol.Pixmap` if `format` is 2.
         :raise RuntimeError: if error happens in remote.
         """
-        script = self._render(
-            'sendDocumentThumbnailToNetworkClient.js.j2', locals()
-        )
+        script = self._render("sendDocumentThumbnailToNetworkClient.js.j2", locals())
         response = self.execute(script, receive_output=True)
-        assert response['content_type'] == ContentType.IMAGE
-        return response.get('body', {}).get('data')
+        assert response["content_type"] == ContentType.IMAGE
+        return response.get("body", {}).get("data")  # type: ignore
 
     def get_layer_thumbnail(
         self,
-        document=None,
-        max_width=2048,
-        max_height=2048,
-        convert_rgb_profile=True,
-        icc_profile=None,
-        interpolation=None,
-        transform=None,
-        layer=None,
-        layer_settings=None,
-        image_settings=None,
-        include_layers=None,
-        clip_bounds=None,
-        bounds=False,
-        bounds_only=False,
-        thread=None,
-        layer_comp_id=None,
-        layer_comp_index=None,
-        dither=True,
-        color_dither=True
-    ):
+        document: Optional[str] = None,
+        max_width: int = 2048,
+        max_height: int = 2048,
+        convert_rgb_profile: bool = True,
+        icc_profile: Optional[str] = None,
+        interpolation: Optional[str] = None,
+        transform: Optional[Dict[str, Any]] = None,
+        layer: Optional[Union[int, Tuple[int, int]]] = None,
+        layer_settings: Optional[Sequence[Dict[str, Any]]] = None,
+        image_settings: Optional[Sequence[Dict[str, Any]]] = None,
+        include_layers: Optional[Dict[str, Any]] = None,
+        clip_bounds: Optional[Union[bool, Tuple[int, ...]]] = None,
+        bounds: Optional[bool] = False,
+        bounds_only: Optional[bool] = False,
+        thread: Optional[bool] = None,
+        layer_comp_id: Optional[str] = None,
+        layer_comp_index: Optional[int] = None,
+        dither: bool = True,
+        color_dither: bool = True,
+    ) -> Optional[Pixmap]:
         """
         Send a thumbnail of layer composite, or a range of layers, with optional
         settings/transform applied.
@@ -324,16 +285,18 @@ class Kevlar(object):
             the group (and vice-versa). The range can also just include layers
             inside a group with no group layers at all.
         """
-        script = self._render(
-            'sendLayerThumbnailToNetworkClient.js.j2', locals()
-        )
+        script = self._render("sendLayerThumbnailToNetworkClient.js.j2", locals())
         response = self.execute(script, receive_output=True)
-        assert response['content_type'] == ContentType.IMAGE
-        return response.get('body', {}).get('data')
+        assert response["content_type"] == ContentType.IMAGE
+        return response.get("body", {}).get("data")  # type: ignore
 
     def get_layer_shape(
-        self, document=None, layer=None, version='1.0.0', placed_ids=None
-    ):
+        self,
+        document: Optional[str] = None,
+        layer: Optional[Union[int, Tuple[int, int]]] = None,
+        version: str = "1.0.0",
+        placed_ids: Optional[Sequence[str]] = None,
+    ) -> Optional[Dict[str, Any]]:
         """
         Return path/fill/strokeStyle for a shape layer(s).
 
@@ -398,29 +361,29 @@ class Kevlar(object):
             }
 
         :raise RuntimeError: if error happens in remote.
-        """
-        script = self._render('sendLayerShapeToNetworkClient.js.j2', locals())
+        """  # noqa
+        script = self._render("sendLayerShapeToNetworkClient.js.j2", locals())
         response = self.execute(script, receive_output=True)
-        assert response['content_type'] == ContentType.SCRIPT
-        return json.loads(response.get('body', b'{}').decode('utf-8'))
+        assert response["content_type"] == ContentType.SCRIPT
+        return json.loads(response.get("body", b"{}").decode("utf-8"))  # type: ignore
 
     def get_document_info(
         self,
-        version=None,
-        document=None,
-        placed_ids=None,
-        layer=None,
-        expand_smart_objects=False,
-        get_text_styles=False,
-        get_full_text_styles=False,
-        get_default_layer_effect=False,
-        get_comp_layer_settings=False,
-        get_path_data=False,
-        image_info=None,
-        comp_info=None,
-        layer_info=True,
-        include_ancestors=True
-    ):
+        version: Optional[str] = None,
+        document: Optional[str] = None,
+        placed_ids: Optional[Sequence[str]] = None,
+        layer: Optional[Union[int, Tuple[int, int]]] = None,
+        expand_smart_objects: bool = False,
+        get_text_styles: bool = False,
+        get_full_text_styles: bool = False,
+        get_default_layer_effect: bool = False,
+        get_comp_layer_settings: bool = False,
+        get_path_data: bool = False,
+        image_info: Optional[bool] = None,
+        comp_info: Optional[bool] = None,
+        layer_info: bool = True,
+        include_ancestors: bool = True,
+    ) -> Dict[str, Any]:
         """
         Return complete document info in JSON format.
 
@@ -461,23 +424,21 @@ class Kevlar(object):
         :raise RuntimeError: if error happens in remote.
         """
         # TODO: Implement whichInfo option.
-        script = self._render(
-            'sendDocumentInfoToNetworkClient.js.j2', locals()
-        )
+        script = self._render("sendDocumentInfoToNetworkClient.js.j2", locals())
         response = self.execute(script, receive_output=True)
-        assert response['content_type'] == ContentType.SCRIPT
-        return json.loads(response.get('body', b'{}').decode('utf-8'))
+        assert response["content_type"] == ContentType.SCRIPT
+        return json.loads(response.get("body", b"{}").decode("utf-8"))  # type: ignore
 
     def get_document_stream(
         self,
-        document=None,
-        placed_ids=None,
-        placed_id=None,
-        layer=None,
-        position=None,
-        size=None,
-        path_only=None
-    ):
+        document: Optional[str] = None,
+        placed_ids: Optional[Sequence[str]] = None,
+        placed_id: Optional[str] = None,
+        layer: Optional[Union[int, Tuple[int, int]]] = None,
+        position: Optional[int] = None,
+        size: Optional[int] = None,
+        path_only: Optional[bool] = None,
+    ) -> Dict[str, Any]:
         """
         Get the file info and file stream for a smart object.
 
@@ -513,9 +474,7 @@ class Kevlar(object):
             To return chunks, or the path format to write it to a temp file.
             Document stream/attributes are returned as a FileStream Reply.
         """
-        script = self._render(
-            'sendDocumentStreamToNetworkClient.js.j2', locals()
-        )
+        script = self._render("sendDocumentStreamToNetworkClient.js.j2", locals())
         response = self.execute(script, receive_output=True)
-        assert response['content_type'] == ContentType.FILE_STREAM
-        return response.get('body')
+        assert response["content_type"] == ContentType.FILE_STREAM
+        return response.get("body")  # type: ignore
