@@ -5,14 +5,12 @@ Python package to remotely execute ExtendScript_ in Adobe Photoshop.
 
 .. _ExtendScript: https://www.adobe.com/devnet/photoshop/scripting.html
 
-.. image:: https://travis-ci.org/kyamagu/photoshop-connection.svg?branch=master
-    :target: https://travis-ci.org/kyamagu/photoshop-connection
-    :alt: Build Status
+.. image:: https://github.com/kyamagu/photoshop-connection/actions/workflows/ci.yaml/badge.svg?branch=main&event=push
+    :target: https://github.com/kyamagu/photoshop-connection/actions/workflows/ci.yaml
+    :alt: Build
 .. image:: https://readthedocs.org/projects/photoshop-connection/badge/?version=latest
     :target: https://photoshop-connection.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
-.. image:: https://codecov.io/gh/kyamagu/photoshop-connection/branch/master/graph/badge.svg
-    :target: https://codecov.io/gh/kyamagu/photoshop-connection
 .. image:: https://img.shields.io/pypi/v/photoshop-connection?color=success
     :target: https://pypi.org/project/photoshop-connection/
     :alt: PyPI
@@ -32,7 +30,7 @@ Install
 -------
 
 .. code-block:: bash
-    
+
     pip install photoshop-connection
 
 Usage
