@@ -1,9 +1,14 @@
+from __future__ import annotations
+
 import enum
-import logging
 import json
+import logging
+import socket
 from struct import pack, unpack
+from typing import Any, Dict
 
 from photoshop.crypto import EncryptDecrypt
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +17,7 @@ class ContentType(enum.IntEnum):
     """
     Message content type.
     """
+
     ILLEGAL = 0
     ERROR_STRING = 1
     SCRIPT = 2
@@ -37,8 +43,16 @@ class Pixmap(object):
     :ivar bits: bits per pixel.
     :ivar data: raw data bytes.
     """
+
     def __init__(
-        self, width, height, row_bytes, color_mode, channels, bits, data
+        self,
+        width: int,
+        height: int,
+        row_bytes: int,
+        color_mode: int,
+        channels: int,
+        bits: int,
+        data: bytes,
     ):
         self.width = width
         self.height = height
@@ -49,31 +63,39 @@ class Pixmap(object):
         self.data = data
 
     @classmethod
-    def parse(kls, data):
+    def parse(cls, data: bytes) -> Pixmap:
         """Parse Pixmap from data."""
         assert len(data) >= 14
-        return kls(*(unpack('>3I3B', data[:15]) + (data[15:], )))
+        return cls(*(unpack(">3I3B", data[:15]) + (data[15:],)))
 
-    def dump(self):
+    def dump(self) -> bytes:
         """Dump Pixmap to bytes."""
-        return pack(
-            '>3I3B', self.width, self.height, self.row_bytes, self.color_mode,
-            self.channels, self.bits
-        ) + self.data
+        header = pack(
+            ">3I3B",
+            self.width,
+            self.height,
+            self.row_bytes,
+            self.color_mode,
+            self.channels,
+            self.bits,
+        )
+        return header + self.data
 
-    def topil(self):
+    def topil(self) -> Image.Image:
         """Convert to PIL Image."""
-        from PIL import Image
         if self.width == 0 or self.height == 0:
             return None
         return Image.frombytes(
-            'RGBA', (self.width, self.height), self.data, 'raw', 'ARGB', 0, 1
+            "RGBA", (self.width, self.height), self.data, "raw", "ARGB", 0, 1
         )
 
-    def __repr__(self):
-        return 'Pixmap(width=%d, height=%d, color=%d, bits=%d, data=%r)' % (
-            self.width, self.height, self.color_mode, self.bits,
-            self.data if len(self.data) < 12 else self.data[:12] + b'...'
+    def __repr__(self) -> str:
+        return "Pixmap(width=%d, height=%d, color=%d, bits=%d, data=%r)" % (
+            self.width,
+            self.height,
+            self.color_mode,
+            self.bits,
+            self.data if len(self.data) < 12 else self.data[:12] + b"...",
         )
 
 
@@ -81,12 +103,20 @@ class Protocol(object):
     """
     Photoshop protocol.
     """
+
     VERSION = 1
 
-    def __init__(self, password):
-        self.enc = EncryptDecrypt(password.encode('ascii'))
+    def __init__(self, password: str):
+        self.enc = EncryptDecrypt(password.encode("ascii"))
 
-    def send(self, socket, content_type, data, transaction=0, status=0):
+    def send(
+        self,
+        socket: socket.socket,
+        content_type: ContentType,
+        data: bytes,
+        transaction: int = 0,
+        status: int = 0,
+    ) -> None:
         """
         Sends data to Photoshop.
 
@@ -95,14 +125,14 @@ class Protocol(object):
         :param transaction: transaction id.
         :param status: execution status, should be 0.
         """
-        body = pack('>3I', self.VERSION, transaction, content_type) + data
+        body = pack(">3I", self.VERSION, transaction, content_type) + data
         encrypted = self.enc.encrypt(body)
         length = 4 + len(encrypted)
-        data = pack('>2I', length, status) + encrypted
-        logger.debug('Sending %d bytes (total %d bytes)' % (length, len(data)))
+        data = pack(">2I", length, status) + encrypted
+        logger.debug("Sending %d bytes (total %d bytes)" % (length, len(data)))
         socket.sendall(data)
 
-    def receive(self, socket):
+    def receive(self, socket: socket.socket) -> Dict[str, Any]:
         """
         Receives data from Photoshop.
 
@@ -129,58 +159,61 @@ class Protocol(object):
         :raise AssertionError: if response format is invalid.
 
         """
-        length = socket.recv(4)
-        if len(length) != 4:
-            raise ConnectionError('Empty response, likely connection closed.')
-        length = unpack('>I', length)[0]
-        assert length >= 4, 'length = %d' % length
+        length_bytes = socket.recv(4)
+        if len(length_bytes) != 4:
+            raise ConnectionError("Empty response, likely connection closed.")
+        length: int = unpack(">I", length_bytes)[0]
+        assert length >= 4, "length = %d" % length
         body = socket.recv(length)
-        assert len(body) == length, (
-            'Expected %d bytes, received %d bytes, password incorrect?' %
-            (length, len(body))
+        assert (
+            len(body) == length
+        ), "Expected %d bytes, received %d bytes, password incorrect?" % (
+            length,
+            len(body),
         )
-        status = unpack('>I', body[:4])[0]
-        logger.debug('%d bytes returned, status = %d' % (length, status))
+        status = unpack(">I", body[:4])[0]
+        logger.debug("%d bytes returned, status = %d" % (length, status))
         body = body[4:]
 
         if status:
             raise ValueError(
-                'status = %d: likely incorrect password: %r' % (
-                    status, body[:min(12, len(body))] +
-                    (b'' if len(body) <= 12 else b'...')
+                "status = %d: likely incorrect password: %r"
+                % (
+                    status,
+                    body[: min(12, len(body))] + (b"" if len(body) <= 12 else b"..."),
                 )
             )
 
         data = self.enc.decrypt(body)
         assert len(data) >= 12
-        protocol, transaction, content_type = unpack('>3I', data[:12])
+        protocol, transaction, content_type = unpack(">3I", data[:12])
         assert protocol == self.VERSION
-        body = data[12:]
+        result: Any = data[12:]
         if content_type == ContentType.IMAGE:
-            body = self._parse_image(body)
+            result = self._parse_image(result)
         elif content_type == ContentType.FILE_STREAM:
-            body = self._parse_file_stream(body)
+            result = self._parse_file_stream(result)
 
         return dict(
             status=status,
             protocol=protocol,
             transaction=transaction,
             content_type=ContentType(content_type),
-            body=body
+            body=result,
         )
 
-    def _parse_image(self, data):
+    def _parse_image(self, data: bytes) -> Dict[str, Any]:
         assert len(data) > 0
         image_type = data[0]
         if image_type == 1:
             return dict(image_type=image_type, data=data[1:])
         elif image_type == 2:
             return dict(image_type=image_type, data=Pixmap.parse(data[1:]))
-        raise ValueError('Unsupported image type: %d' % image_type)
+        raise ValueError("Unsupported image type: %d" % image_type)
 
-    def _parse_file_stream(self, data):
+    def _parse_file_stream(self, data: bytes) -> Dict[str, Any]:
         assert len(data) >= 4
-        length = unpack('>I', data[:4])[0]
-        info = json.loads(data[4:length + 4].decode('utf-8'))
-        info['data'] = data[4 + length:]
-        return info
+        length: int = unpack(">I", data[:4])[0]
+        info = json.loads(data[4 : length + 4].decode("utf-8"))
+        info["data"] = data[4 + length :]
+        return info  # type: ignore
