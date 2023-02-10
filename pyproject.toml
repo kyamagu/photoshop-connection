@@ -21,7 +21,7 @@ include = ["src/**/*.js.j2"]
 [tool.poetry.dependencies]
 python = "^3.7"
 cryptography = "^39.0.1"
-jinja2 = "^3.1.2"
+jinja2 = "<3.1.0"
 
 [tool.poetry.group.dev.dependencies]
 esprima = "^4.0.1"
@@ -31,6 +31,12 @@ pysen = {extras = ["lint"], version = "^0.10.3"}
 flake8 = "<5"
 pytest-cov = "^4.0.0"
 pytest-timeout = "^2.1.0"
+
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "<2"
+sphinx-rtd-theme = "<0.5"
+readthedocs-sphinx-ext = "<2.3"
 
 [build-system]
 requires = ["poetry-core"]
