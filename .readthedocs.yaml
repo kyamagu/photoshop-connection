@@ -7,8 +7,8 @@ build:
     python: "3.12"
 
 python:
-  install:
-    - requirements: docs/requirements.txt
+    install:
+    - pip install . --group docs
 
 sphinx:
   configuration: docs/conf.py
