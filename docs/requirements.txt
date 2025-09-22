@@ -1,1 +1,2 @@
-cryptography >= 39.0, < 43.0
+sphinx
+sphinx-rtd-theme
