@@ -164,7 +164,7 @@ class Protocol(object):
             raise ConnectionError("Empty response, likely connection closed.")
         length: int = unpack(">I", length_bytes)[0]
         assert length >= 4, "length = %d" % length
-        body = socket.recv(length)
+        body = self._receive_all(socket, length)
         assert (
             len(body) == length
         ), "Expected %d bytes, received %d bytes, password incorrect?" % (
@@ -201,6 +201,33 @@ class Protocol(object):
             content_type=ContentType(content_type),
             body=result,
         )
+
+    def _receive_all(self, socket: socket.socket, length: int) -> bytes:
+        """
+        Blocks until exactly `length` bytes are read from the socket, or raises
+        ConnectionError if the connection is closed before all bytes are received.
+
+        :param socket: The socket to read from.
+        :param length: The exact number of bytes to read.
+        :return: The bytes read from the socket.
+        :raises ConnectionError: If the connection is closed before all bytes are received.
+        """
+        chunk_size = 4096
+        chunks = []
+        bytes_received = 0
+        while bytes_received < length:
+            # Request the remaining part of the data, in chunks of up to 4096 bytes.
+            chunk = socket.recv(min(length - bytes_received, chunk_size))
+            if not chunk:
+                raise ConnectionError(
+                    "Socket connection broken. Expected %i bytes but "
+                    "received only %i before connection closed." % (length, bytes_received)
+                )
+            chunks.append(chunk)
+            bytes_received += len(chunk)
+
+        # Assemble all chunks into a single bytes object.
+        return b"".join(chunks)
 
     def _parse_image(self, data: bytes) -> Dict[str, Any]:
         assert len(data) > 0
