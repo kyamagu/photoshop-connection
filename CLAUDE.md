@@ -12,6 +12,9 @@ uv sync
 # Install with dev dependencies
 uv sync --group dev
 
+# Install with docs dependencies
+uv sync --group docs
+
 # Install with all groups and extras
 uv sync --all-groups --all-extras
 ```

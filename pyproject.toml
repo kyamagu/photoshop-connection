@@ -39,7 +39,6 @@ dev = [
 docs = [
   "sphinx",
   "sphinx-rtd-theme",
-  "readthedocs-sphinx-ext",
 ]
 
 [build-system]
