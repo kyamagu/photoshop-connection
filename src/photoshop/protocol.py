@@ -204,7 +204,13 @@ class Protocol(object):
 
     def _receive_all(self, socket: socket.socket, length: int) -> bytes:
         """
-        Helper function to reliably receive a specific number of bytes from a socket.
+        Blocks until exactly `length` bytes are read from the socket, or raises
+        ConnectionError if the connection is closed before all bytes are received.
+
+        :param socket: The socket to read from.
+        :param length: The exact number of bytes to read.
+        :return: The bytes read from the socket.
+        :raises ConnectionError: If the connection is closed before all bytes are received.
         """
         chunk_size = 4096
         chunks = []
