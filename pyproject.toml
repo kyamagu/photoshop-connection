@@ -1,6 +1,6 @@
 [project]
 name = "photoshop-connection"
-version = "0.2.0"
+version = "0.3.0"
 description = "Python package for Photoshop Connection"
 authors = [{name = "Kota Yamaguchi", email = "KotaYamaguchi1984@gmail.com"}]
 license = "MIT"
