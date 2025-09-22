@@ -18,23 +18,21 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v4
-        name: Install Python
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
         with:
-          python-version: '3.8'
-
-      - uses: abatilo/actions-poetry@v2
+          enable-cache: true
 
       - name: Install dependencies
-        run: poetry install
+        run: uv sync --group dev
 
       - name: Build package
-        run: poetry build --format wheel
+        run: uv build --wheel
 
       - name: Test
-        run: poetry run pytest
+        run: uv run pytest
 
       - name: Publish package
         if: github.event_name == 'release' && github.event.action == 'published'
