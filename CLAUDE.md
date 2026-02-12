@@ -100,3 +100,21 @@ Tests require a running Photoshop instance with remote connections enabled. Set 
 - **jinja2**: For JavaScript template rendering
 - **esprima** (optional dev): For JavaScript validation
 - **pillow** (dev): For image handling in tests
+
+## Release
+
+The release is based on GitHub release. The CI workflow (.github/workflows/ci.yaml) automatically builds and publishes the package to PyPI when a GitHub release is published.
+
+### Steps to release
+
+1. Bump the version in the following files:
+   - `pyproject.toml` (`version` field)
+   - `docs/conf.py` (`version` variable)
+2. Commit and push the version bump to `main`
+3. Create a GitHub release with a tag matching `vX.Y.Z`:
+
+   ```bash
+   gh release create vX.Y.Z --target main --title "vX.Y.Z" --generate-notes
+   ```
+
+4. The CI publish job will build the wheel and publish to PyPI via trusted publisher
